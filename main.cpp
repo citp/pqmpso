@@ -3,13 +3,14 @@
 #include "hashmap.hpp"
 #include "argparse.hpp"
 #include "utils.hpp"
+#include "delegate.hpp"
 
 using namespace std;
 using namespace seal;
 
 void print_parameters(bool iu, int n, int x0, int xi, int int_sz, string dir, bool v)
 {
-  cout << "===================================" << endl;
+  print_sep();
   cout << "Protocol\t" << (iu ? "MPSIU" : "MPSI") << endl;
   cout << "#Parties\t" << n << endl;
   cout << "|X_0|\t\t" << x0 << endl;
@@ -17,7 +18,7 @@ void print_parameters(bool iu, int n, int x0, int xi, int int_sz, string dir, bo
   cout << "|I|\t\t" << int_sz << endl;
   cout << "Location\t" << dir << endl;
   cout << "Verbose?\t" << (v ? "True" : "False") << endl;
-  cout << "===================================" << endl;
+  print_sep();
 }
 
 int main(int argc, char *argv[])
@@ -94,8 +95,15 @@ int main(int argc, char *argv[])
     write_data(data, dir);
   }
 
+  print_sep();
+
+  ProtocolParameters pro_parms = {1048576};
+  EncryptionParameters enc_parms = gen_enc_params();
+  Delegate del(enc_parms, pro_parms);
+  del.start(data[0]);
+
   // cout << "Set encryption parameters and print" << endl;
-  // EncryptionParameters parms = gen_enc_params();
+  //
   // SEALContext context(parms);
   // cout << "Parameter validation (success): " << context.parameter_error_message() << endl;
 

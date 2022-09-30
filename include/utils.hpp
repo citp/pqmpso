@@ -6,9 +6,17 @@
 #include <fstream>
 #include <map>
 #include <string>
-#include <coro/coro.hpp>
 
 using namespace std;
+
+/* Pretty Printing */
+
+inline void print_sep()
+{
+  cout << "===================================" << endl;
+}
+
+/* Randomness */
 
 string random_string()
 {
@@ -21,39 +29,11 @@ vector<string> random_strings(size_t num)
 {
   vector<string> ret(num);
   for (size_t i = 0; i < num; i++)
-    ret[i] = random_string(len);
+    ret[i] = random_string();
   return ret;
 }
 
-// {
-//   using namespace coro;
-//   thread_pool tp;
-
-//   auto offload_task = [&]() -> task<string>
-//   {
-//     co_return random_string();
-//   };
-
-//   auto main_task = [&]() -> task<vector<string>>
-//   {
-//     vector<task<string>> child_tasks{};
-//     child_tasks.reserve(num);
-//     for (size_t i = 0; i < num; ++i)
-//       child_tasks.emplace_back(offload_task());
-//     auto res = co_await when_all(move(child_tasks));
-
-//     vector<string> ret;
-//     ret.reserve(num);
-//     for (const auto &task : res)
-//     {
-//       ret.emplace_back(task.return_value());
-//     }
-//     co_return ret;
-//   };
-
-//   auto res = sync_wait(main_task());
-//   return res;
-// }
+/* File IO */
 
 void write(vector<string> &vec, string fpath)
 {
@@ -68,6 +48,29 @@ void read(vector<string> &vec, string fpath)
   for (size_t i = 0; i < vec.size(); i++)
   {
     in_file >> vec[i];
+  }
+}
+
+void write_data(vector<vector<string>> &data, string dirpath)
+{
+  cout << "Writing data..." << endl;
+  for (size_t i = 0; i < data.size(); i++)
+  {
+    string path = dirpath + "/" + to_string(i) + ".dat";
+    write(data[i], path);
+    cout << "\tWrote to " << path << "." << endl;
+  }
+}
+
+void read_data(vector<vector<string>> &data, size_t x0, size_t xi, string dirpath)
+{
+  cout << "Reading data..." << endl;
+  for (size_t i = 0; i < data.size(); i++)
+  {
+    data[i].resize(((i == 0) ? x0 : xi));
+    string path = dirpath + "/" + to_string(i) + ".dat";
+    read(data[i], path);
+    cout << "\tRead from " << path << "." << endl;
   }
 }
 
@@ -127,26 +130,4 @@ void gen_random_data(vector<vector<string>> &ret, size_t n_parties, size_t x0, s
   }
 
   cout << " generated." << endl;
-}
-
-void write_data(vector<vector<string>> &data, string dirpath)
-{
-  cout << "Writing data..." << endl;
-  for (size_t i = 0; i < data.size(); i++)
-  {
-    string path = dirpath + "/" + to_string(i) + ".dat";
-    write(data[i], path);
-    cout << "\tWrote to " << path << "." << endl;
-  }
-}
-
-void read_data(vector<vector<string>> &data, size_t x0, size_t xi, string dirpath)
-{
-  cout << "Reading data..." << endl;
-  for (size_t i = 0; i < data.size(); i++)
-  {
-    data[i].resize(((i == 0) ? x0 : xi));
-    string path = dirpath + "/" + to_string(i) + ".dat";
-    read(data[i], path);
-  }
 }
