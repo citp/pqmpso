@@ -8,7 +8,7 @@
 using namespace std;
 // using namespace lbcrypto;
 
-void print_parameters(bool iu, int n, int x0, int xi, int int_sz, int map_sz, string dir, bool v)
+void print_parameters(bool iu, int n, int x0, int xi, int int_sz, int map_sz, string dir, bool v, int nthreads)
 {
   print_sep();
   cout << "Protocol\t" << (iu ? "MPSIU" : "MPSI") << endl;
@@ -17,6 +17,7 @@ void print_parameters(bool iu, int n, int x0, int xi, int int_sz, int map_sz, st
   cout << "|X_i|\t\t" << xi << endl;
   cout << "|I|\t\t" << int_sz << endl;
   cout << "|M|\t\t" << map_sz << endl;
+  cout << "Threads\t\t" << nthreads << endl;
   cout << "Location\t" << dir << endl;
   cout << "Verbose?\t" << (v ? "True" : "False") << endl;
   print_sep();
@@ -40,22 +41,22 @@ int main(int argc, char *argv[])
       .scan<'i', int>();
 
   program.add_argument("--x0")
-      .default_value(256)
+      .default_value(1048576)
       .help("size of delegate's input set")
       .scan<'i', int>();
 
   program.add_argument("--xi")
-      .default_value(1024)
+      .default_value(1048576)
       .help("size of non-delegate's input set")
       .scan<'i', int>();
 
   program.add_argument("--int")
-      .default_value(64)
+      .default_value(65536)
       .help("size of the intersection (with union)")
       .scan<'i', int>();
 
   program.add_argument("--map")
-      .default_value(16384)
+      .default_value(16777216)
       .help("size of the hashmap")
       .scan<'i', int>();
 
@@ -65,12 +66,17 @@ int main(int argc, char *argv[])
 
   program.add_argument("--pack")
       .help("packing type")
-      .default_value(string("single"));
+      .default_value(string("compact"));
 
   program.add_argument("--v")
       .help("increase output verbosity")
       .default_value(false)
       .implicit_value(true);
+
+  program.add_argument("--t")
+      .default_value(64)
+      .help("number of threads to use")
+      .scan<'i', int>();
 
   program.add_argument("--gen")
       .help("generate random data and exit, do NOT run the protocol")
@@ -99,14 +105,15 @@ int main(int argc, char *argv[])
   auto v = program.get<bool>("--v");
   auto gen_only = program.get<bool>("--gen");
   auto pack_type_str = program.get<string>("--pack");
+  auto nthreads = program.get<int>("--t");
 
-  PackingType pack_type = SINGLE;
+  PackingType pack_type = MULTIPLE_COMPACT;
   if (pack_type_str == "multiple")
     pack_type = MULTIPLE;
-  else if (pack_type_str == "compact")
-    pack_type = MULTIPLE_COMPACT;
+  else if (pack_type_str == "single")
+    pack_type = SINGLE;
 
-  print_parameters(iu, n, x0, xi, int_sz, map_sz, dir, v);
+  print_parameters(iu, n, x0, xi, int_sz, map_sz, dir, v, nthreads);
 
   vector<vector<string>> data(n);
   if (read)
@@ -124,7 +131,7 @@ int main(int argc, char *argv[])
   if (gen_only)
     exit(0);
 
-  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 32, NULL, pack_type};
+  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 32, (size_t)nthreads, pack_type, NULL};
 
   shared_ptr<CCParams<CryptoContextBFVRNS>> enc_parms = gen_enc_params();
   Delegate del(enc_parms, pro_parms);
@@ -137,10 +144,13 @@ int main(int argc, char *argv[])
   {
     pro_parms.party_id = i + 1;
     providers[i] = Party(enc_parms, pro_parms);
-    providers[i].mpsiu(M, R, data[i + 1]);
-    cout << "Computed intersection size = " << endl
-         << del.finish(R) << endl;
+    if (iu)
+      providers[i].mpsiu(&M, &R, data[i + 1]);
+    else
+      providers[i].mpsi(&M, &R, data[i + 1]);
   }
+  cout << "Computed intersection size = " << endl
+       << del.finish(&R) << endl;
 
   // cout << "Set encryption parameters and print" << endl;
   //

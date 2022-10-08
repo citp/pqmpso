@@ -3,20 +3,13 @@
 #include <vector>
 // #include <seal/seal.h>
 #include <cassert>
+#include <set>
 
 #include <cryptopp/osrng.h>
 
 using namespace std;
-// using namespace seal;
 
-/* Helpers */
-
-// inline size_t IndexFn(const string &x, size_t n)
-// {
-//   return *((size_t *)Blake2b(x, sizeof(size_t)).data()) % n;
-// }
-
-/* Main API */
+/* -------------------------------------- */
 
 struct HashMap
 {
@@ -30,9 +23,6 @@ struct HashMap
     sz = pro_parms.hash_sz;
     pack_type = pro_parms.pack_type;
     n_bits = get_bitsize(n);
-    // plain_mod_bits = enc_parms.plain_modulus().bit_count() - 1;
-    // plain_mod = enc_parms.plain_modulus().value();
-    // poly_mod_deg = enc_parms.poly_modulus_degree();
     data = vector<vector<uint8_t>>(n);
   }
 
@@ -43,35 +33,6 @@ struct HashMap
   {
     return *((size_t *)blake2b(x + "||~~MAP~~||", sizeof(size_t)).data()) % n;
   }
-
-  // Returns the number of plaintexts needed to pack the hash map
-  // inline size_t get_num_pt(PackingType pack_type, size_t poly_mod_deg)
-  // {
-  //   size_t nhpt = n_hashes_in_pt(pack_type, poly_mod_deg, sz * 8);
-  //   return (n / nhpt) + ((n % nhpt == 0) ? 0 : 1);
-  // }
-
-  // Returns the (starting) plaintext index associated with a hashmap index
-  // inline size_t get_pt_index(size_t map_idx)
-  // {
-  //   size_t nbits_pt = plain_mod_bits * poly_mod_deg;
-  //   size_t nbits_before = map_idx * sz * 8;
-  //   return nbits_before / nbits_pt;
-  // }
-
-  // inline size_t get_start_in_pt(size_t i)
-  // {
-  // }
-
-  // Returns a coefficient in [0, 2^plain_mod_bits] with index cf_idx associated with the string at map_idx.
-  // inline size_t get_cf(size_t map_idx, size_t cf_idx, size_t offset)
-  // {
-  //   assert(cf_idx * plain_mod_bits < sz * 8);
-
-  // data[map_idx]
-  // size_t nbits_before = cf_idx * plain_mod_bits;
-  //   return nbits_before;
-  // }
 
   /* -------------------------------------- */
 
@@ -95,6 +56,17 @@ struct HashMap
     return n_empty;
   }
 
+  set<size_t> filled_slots()
+  {
+    set<size_t> ret;
+    for (size_t i = 0; i < data.size(); i++)
+    {
+      if (data[i].size() > 0)
+        ret.insert(i);
+    }
+    return ret;
+  }
+
   void fill_empty_random()
   {
     Stopwatch sw;
@@ -115,18 +87,52 @@ struct HashMap
     }
     // cout << "# Empty slots: " << n_empty << endl;
     // cout << "Generated " << n_empty * sz << " random bytes" << endl;
-    cout << "filled empty slots with randomness... ";
+    // cout << "filled empty slots with randomness... ";
   }
 
   void fill_empty_zeros()
   {
     for (size_t i = 0; i < n; i++)
     {
-      if (data[i].size() < sz)
+      if (data[i].size() == 0)
         data[i] = vector<uint8_t>(sz, 0);
       assert(data[i].size() == sz);
     }
-    cout << "filled empty slots with zeros... ";
+    // cout << "filled empty slots with zeros... ";
+  }
+
+  void fill_int_arr(vector<int64_t> *int_vec, size_t val, size_t start_idx, size_t num_vals)
+  {
+    for (size_t i = start_idx; i < start_idx + num_vals; i++)
+      (*int_vec)[i] = val;
+  }
+
+  void hot_encoding_mask(CryptoContext<DCRTPoly> &bfv_ctx, vector<PT> &pt, bool zero_hot)
+  {
+    set<size_t> filled = filled_slots();
+    size_t plain_mod_bits = get_bitsize(bfv_ctx->GetEncodingParams()->GetPlaintextModulus()) - 1;
+    size_t nbits = sz * 8;
+    size_t ring_dim = bfv_ctx->GetRingDimension();
+    size_t num_hashes_per_pt = n_hashes_in_pt(pack_type, ring_dim, plain_mod_bits, nbits);
+    size_t num_pt = (n / num_hashes_per_pt) + ((n % num_hashes_per_pt == 0) ? 0 : 1);
+    pt.resize(num_pt);
+    size_t mark = zero_hot ? 0 : 1;
+
+    size_t n_cf_per_hash = nbits;
+    if (pack_type == MULTIPLE_COMPACT)
+      n_cf_per_hash = ring_dim / num_hashes_per_pt;
+    for (size_t i = 0; i < num_pt; i++)
+    {
+      vector<int64_t> int_vec(n_cf_per_hash * num_hashes_per_pt);
+      for (size_t j = 0; j < num_hashes_per_pt; j++)
+      {
+        if (filled.find(i * num_hashes_per_pt + j) != filled.end())
+          fill_int_arr(&int_vec, mark, n_cf_per_hash * j, n_cf_per_hash);
+        else
+          fill_int_arr(&int_vec, 1 - mark, n_cf_per_hash * j, n_cf_per_hash);
+      }
+      pt[i] = bfv_ctx->MakePackedPlaintext(int_vec);
+    }
   }
 
   void serialize(CryptoContext<DCRTPoly> &bfv_ctx, vector<PT> &pt, bool fill_random)
@@ -171,7 +177,3 @@ struct HashMap
     }
   }
 };
-
-// void serialize_one(Plaintext &pt, vector<vector<uint8_t>> &to_pack, size_t start_idx, size_t count)
-// {
-// }

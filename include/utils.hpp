@@ -31,7 +31,7 @@ struct Stopwatch
   inline double elapsed()
   {
     auto t1 = high_resolution_clock::now();
-    return duration<double>(t1 - t0).count();
+    return std::chrono::duration_cast<milliseconds>(t1 - t0).count() / 1e3;
   }
 };
 

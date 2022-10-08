@@ -35,9 +35,9 @@ enum PackingType
 
 struct ProtocolParameters
 {
-  size_t party_id, num_parties, map_sz, hash_sz;
-  PK pk;
+  size_t party_id, num_parties, map_sz, hash_sz, num_threads;
   PackingType pack_type;
+  PK pk;
 };
 
 /* -------------------------------------- */
@@ -52,8 +52,8 @@ shared_ptr<CCParams<CryptoContextBFVRNS>> gen_enc_params()
   shared_ptr<CCParams<CryptoContextBFVRNS>> parms = make_shared<CCParams<CryptoContextBFVRNS>>();
   // parms->SetToDefaults(BFVRNS_SCHEME);
   parms->SetPlaintextModulus(65537);
-  parms->SetMultiplicativeDepth(0);
-  parms->SetEvalAddCount(10);
+  parms->SetMultiplicativeDepth(1);
+  parms->SetEvalAddCount(0);
   // parms->SetBatchSize(2048);
   // parms->SetDigitSize(2048);
   parms->SetRingDim(4096);
@@ -171,23 +171,41 @@ void unpack_bitwise_multiple(PT &pt, vector<vector<uint8_t>> *unpacked, size_t c
 }
 
 // Hardcoded 2 bytes i.e. mod 65537
-void pack_compact_int_arr(vector<int64_t> *int_vec, vector<uint8_t> *to_pack, size_t start_idx)
+inline void pack_compact_int_arr(vector<int64_t> *int_vec, vector<uint8_t> *to_pack, size_t start_idx)
 {
   for (size_t i = 0; i < to_pack->size() / 2; i++)
     memcpy(&(int_vec->data()[start_idx + i]), &(to_pack->data()[2 * i]), 2);
 }
 
+// inline void pack_compact_int
+
+// Hardcoded 2 bytes i.e. mod 65537
+// inline void mask_compact_int_arr(vector<int64_t> *int_vec, vector<uint8_t> *to_pack, size_t start_idx)
+// {
+//   for (size_t i = 0; i < to_pack->size() / 2; i++)
+//     memcpy(&(int_vec->data()[start_idx + i]), &(to_pack->data()[2 * i]), 2);
+// }
+
 // start_idx in to_pack
 void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, bool fill_random)
 {
-  vector<int64_t> int_vec(bfv_ctx->GetRingDimension());
-  size_t num_cf_per_hash = bfv_ctx->GetRingDimension() / count;
+  size_t ring_dim = bfv_ctx->GetRingDimension();
+  vector<int64_t> int_vec(ring_dim);
+  size_t num_cf_per_hash = ring_dim / count;
   for (size_t i = 0; i < count; i++)
-  {
     pack_compact_int_arr(&int_vec, &to_pack->at(start_idx + i), num_cf_per_hash * i);
-  }
   *pt = bfv_ctx->MakePackedPlaintext(int_vec);
 }
+
+// void mask_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, bool fill_random)
+// {
+//   size_t ring_dim = bfv_ctx->GetRingDimension();
+//   vector<int64_t> int_vec(ring_dim);
+//   size_t num_cf_per_hash = ring_dim / count;
+//   for (size_t i = 0; i < count; i++)
+//     pack_compact_int_arr(&int_vec, &to_pack->at(start_idx + i), num_cf_per_hash * i);
+//   *pt = bfv_ctx->MakePackedPlaintext(int_vec);
+// }
 
 void unpack_multiple_compact(PT &pt, vector<vector<uint8_t>> *unpacked, size_t num_bytes_per_hash)
 {
