@@ -1,14 +1,14 @@
 #include <iostream>
 #include "crypto.hpp"
+#include "utils.hpp"
 #include "hashmap.hpp"
 #include "argparse.hpp"
-#include "utils.hpp"
 #include "delegate.hpp"
 
 using namespace std;
-using namespace seal;
+// using namespace lbcrypto;
 
-void print_parameters(bool iu, int n, int x0, int xi, int int_sz, string dir, bool v)
+void print_parameters(bool iu, int n, int x0, int xi, int int_sz, int map_sz, string dir, bool v)
 {
   print_sep();
   cout << "Protocol\t" << (iu ? "MPSIU" : "MPSI") << endl;
@@ -16,6 +16,7 @@ void print_parameters(bool iu, int n, int x0, int xi, int int_sz, string dir, bo
   cout << "|X_0|\t\t" << x0 << endl;
   cout << "|X_i|\t\t" << xi << endl;
   cout << "|I|\t\t" << int_sz << endl;
+  cout << "|M|\t\t" << map_sz << endl;
   cout << "Location\t" << dir << endl;
   cout << "Verbose?\t" << (v ? "True" : "False") << endl;
   print_sep();
@@ -39,26 +40,40 @@ int main(int argc, char *argv[])
       .scan<'i', int>();
 
   program.add_argument("--x0")
-      .default_value(1024)
+      .default_value(256)
       .help("size of delegate's input set")
       .scan<'i', int>();
 
   program.add_argument("--xi")
-      .default_value(1048576)
+      .default_value(1024)
       .help("size of non-delegate's input set")
       .scan<'i', int>();
 
   program.add_argument("--int")
-      .default_value(128)
+      .default_value(64)
       .help("size of the intersection (with union)")
+      .scan<'i', int>();
+
+  program.add_argument("--map")
+      .default_value(16384)
+      .help("size of the hashmap")
       .scan<'i', int>();
 
   program.add_argument("--dir")
       .help("data directory")
       .default_value(string("./data"));
 
+  program.add_argument("--pack")
+      .help("packing type")
+      .default_value(string("single"));
+
   program.add_argument("--v")
       .help("increase output verbosity")
+      .default_value(false)
+      .implicit_value(true);
+
+  program.add_argument("--gen")
+      .help("generate random data and exit, do NOT run the protocol")
       .default_value(false)
       .implicit_value(true);
 
@@ -79,33 +94,58 @@ int main(int argc, char *argv[])
   auto x0 = program.get<int>("--x0");
   auto xi = program.get<int>("--xi");
   auto int_sz = program.get<int>("--int");
+  auto map_sz = program.get<int>("--map");
   auto dir = program.get<string>("--dir");
   auto v = program.get<bool>("--v");
+  auto gen_only = program.get<bool>("--gen");
+  auto pack_type_str = program.get<string>("--pack");
 
-  print_parameters(iu, n, x0, xi, int_sz, dir, v);
+  PackingType pack_type = SINGLE;
+  if (pack_type_str == "multiple")
+    pack_type = MULTIPLE;
+  else if (pack_type_str == "compact")
+    pack_type = MULTIPLE_COMPACT;
+
+  print_parameters(iu, n, x0, xi, int_sz, map_sz, dir, v);
 
   vector<vector<string>> data(n);
   if (read)
-  {
     read_data(data, x0, xi, dir);
-  }
   else
-  {
     gen_random_data(data, n, x0, xi, int_sz, iu);
+
+  assert((size_t)int_sz == get_intersection_size(data, iu));
+
+  if (!read)
     write_data(data, dir);
-  }
 
   print_sep();
 
-  ProtocolParameters pro_parms = {1048576};
-  EncryptionParameters enc_parms = gen_enc_params();
+  if (gen_only)
+    exit(0);
+
+  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 32, NULL, pack_type};
+
+  shared_ptr<CCParams<CryptoContextBFVRNS>> enc_parms = gen_enc_params();
   Delegate del(enc_parms, pro_parms);
-  del.start(data[0]);
+  vector<Party> providers(n - 1);
+
+  vector<CT> M = del.start(data[0]);
+  vector<CT> R(M.size());
+  pro_parms.pk = del.party.pro_parms.pk;
+  for (int i = 0; i < n - 1; i++)
+  {
+    pro_parms.party_id = i + 1;
+    providers[i] = Party(enc_parms, pro_parms);
+    providers[i].mpsiu(M, R, data[i + 1]);
+    cout << "Computed intersection size = " << endl
+         << del.finish(R) << endl;
+  }
 
   // cout << "Set encryption parameters and print" << endl;
   //
   // SEALContext context(parms);
-  // cout << "Parameter validation (success): " << context.parameter_error_message() << endl;
+  // cout << "Parameter validatijbvcfk/'m on (success): " << context.parameter_error_message() << endl;
 
   // HashMap<seal::Ciphertext> hm = New<seal::Ciphertext>(10, 50);
   // Ciphertext x_encrypted;

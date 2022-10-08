@@ -2,25 +2,45 @@ cmake_minimum_required(VERSION 3.16)
 
 project(pqmpso)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/target)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_BUILD_TYPE DEBUG)
-set(CMAKE_CXX_FLAGS "-O0 -ggdb -Wall -fpermissive")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE RELEASE)
+set(CMAKE_CXX_FLAGS "-O3 -ggdb -Wall -fpermissive")
 
-# Fetch the project and make it available for use.
-# include(FetchContent)
-# FetchContent_Declare(
-#     libcoro
-#     GIT_REPOSITORY https://github.com/jbaldwin/libcoro.git
-#     GIT_TAG        v0.5
-# )
-# FetchContent_MakeAvailable(libcoro)
+option( BUILD_STATIC "Set to ON to include static versions of the library" OFF)
+
+find_package(OpenFHE)
+
+set( CMAKE_CXX_FLAGS ${OpenFHE_CXX_FLAGS} )
+
+include_directories( ${OPENMP_INCLUDES} )
+include_directories( ${OpenFHE_INCLUDE} )
+include_directories( ${OpenFHE_INCLUDE}/third-party/include )
+include_directories( ${OpenFHE_INCLUDE}/core )
+include_directories( ${OpenFHE_INCLUDE}/pke )
+### add directories for other OpenFHE modules as needed for your project
+
+link_directories( ${OpenFHE_LIBDIR} )
+link_directories( ${OPENMP_LIBRARIES} )
+if(BUILD_STATIC)
+    set( CMAKE_EXE_LINKER_FLAGS "${OpenFHE_EXE_LINKER_FLAGS} -static")
+    link_libraries( ${OpenFHE_STATIC_LIBRARIES} )
+else()
+    set( CMAKE_EXE_LINKER_FLAGS ${OpenFHE_EXE_LINKER_FLAGS} )
+    link_libraries( ${OpenFHE_SHARED_LIBRARIES} )
+endif()
 
 add_executable(pqmpso main.cpp)
 target_include_directories(pqmpso PRIVATE ${CMAKE_BINARY_DIR}/include)
-target_include_directories(pqmpso PUBLIC /usr/local/include/SEAL-4.0)
-target_link_libraries(pqmpso PUBLIC seal-4.0 cryptopp pthread)
+# target_include_directories(pqmpso PUBLIC /usr/local/include/SEAL-4.0)
+target_include_directories(pqmpso PUBLIC /usr/local/include/openfhe/core)
+target_include_directories(pqmpso PUBLIC /usr/local/include/openfhe/pke)
+target_include_directories(pqmpso PUBLIC /usr/local/include/openfhe)
+target_link_libraries(pqmpso PUBLIC cryptopp pthread)
 
-# MESSAGE( STATUS "CMAKE_C_FLAGS: " ${CMAKE_C_FLAGS} )
-
-# # the compiler flags for compiling C++ sources 
-# MESSAGE( STATUS "CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS} )
+# add_executable(pqmpso_test tests.cpp)
+# target_include_directories(pqmpso_test PRIVATE ${CMAKE_BINARY_DIR}/include)
+# # target_include_directories(pqmpso_test PUBLIC /usr/local/include/SEAL-4.0)
+# target_include_directories(pqmpso_test PUBLIC /usr/local/include/openfhe/core)
+# target_include_directories(pqmpso_test PUBLIC /usr/local/include/openfhe/pke)
+# target_include_directories(pqmpso_test PUBLIC /usr/local/include/openfhe)
+# target_link_libraries(pqmpso_test PUBLIC cryptopp pthread)
