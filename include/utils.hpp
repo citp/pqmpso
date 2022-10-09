@@ -133,7 +133,7 @@ void write_data(vector<vector<string>> &data, string dirpath)
   }
 }
 
-void read_data(vector<vector<string>> &data, size_t x0, size_t xi, string dirpath)
+void read_data(vector<vector<string>> &data, vector<int64_t> &ad, size_t x0, size_t xi, string dirpath)
 {
   cout << "Reading data..." << endl;
   for (size_t i = 0; i < data.size(); i++)
@@ -184,15 +184,15 @@ size_t get_intersection_size(vector<vector<string>> &data, bool iu)
   return I.size();
 }
 
-void gen_random_data(vector<vector<string>> &ret, size_t n_parties, size_t x0, size_t xi, size_t int_sz, bool iu, bool run_sum)
+void gen_random_data(vector<vector<string>> &ret, vector<int64_t> &ad, size_t n_parties, size_t x0, size_t xi, size_t int_sz, bool iu, bool run_sum)
 {
   cout << "Generating random data...";
+  random_device rd;
+  mt19937 generator(rd());
   vector<string> int_strs = random_strings(int_sz);
   if (iu)
   {
     // Intersection-With-Union
-    random_device rd;
-    mt19937 generator(rd());
     ret[0] = vector<string>(int_strs);
     for (size_t i = 1; i < n_parties; i++)
       ret[i] = vector<string>();
@@ -237,6 +237,13 @@ void gen_random_data(vector<vector<string>> &ret, size_t n_parties, size_t x0, s
   for (size_t i = 0; i < ret.size(); i++)
   {
     sort(ret[i].begin(), ret[i].end());
+  }
+
+  if (run_sum)
+  {
+    ad.resize(ret[0].size());
+    for (size_t i = 0; i < ad.size(); i++)
+      ad[i] = generator() % 1000;
   }
 
   cout << " generated." << endl;

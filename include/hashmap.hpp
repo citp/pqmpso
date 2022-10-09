@@ -31,7 +31,9 @@ struct HashMap
   // Returns the index of x in the hashmap
   inline size_t get_map_index(const string &x)
   {
-    return *((size_t *)blake2b(x + "||~~MAP~~||", sizeof(size_t)).data()) % n;
+    vector<uint8_t> h = sha384(x + "||~~MAP~~||");
+    h.resize(sizeof(size_t));
+    return *((size_t *)h.data()) % n;
   }
 
   /* -------------------------------------- */
@@ -41,7 +43,7 @@ struct HashMap
   {
     for (auto x : X)
     {
-      data[get_map_index(x)] = blake2b(x + "||**VALUE**||", sz);
+      data[get_map_index(x)] = sha384(x + "||**VALUE**||");
     }
   }
 

@@ -123,10 +123,12 @@ int main(int argc, char *argv[])
   print_parameters(iu, run_sum, n, x0, xi, int_sz, map_sz, dir, v, nthreads);
 
   vector<vector<string>> data(n);
+  vector<int64_t> ad;
+
   if (read)
-    read_data(data, x0, xi, dir);
+    read_data(data, ad, x0, xi, dir);
   else
-    gen_random_data(data, n, x0, xi, int_sz, iu, run_sum);
+    gen_random_data(data, ad, n, x0, xi, int_sz, iu, run_sum);
 
   assert((size_t)int_sz == get_intersection_size(data, iu));
 
@@ -138,7 +140,7 @@ int main(int argc, char *argv[])
   if (gen_only)
     exit(0);
 
-  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 32, (size_t)nthreads, pack_type, NULL};
+  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, pack_type, NULL};
 
   shared_ptr<CCParams<CryptoContextBFVRNS>> enc_parms = gen_enc_params();
   Delegate del(enc_parms, pro_parms);

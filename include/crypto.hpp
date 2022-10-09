@@ -1,7 +1,8 @@
 #pragma once
 
 #include <vector>
-// #include <seal/seal.h>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 #include <cryptopp/blake2.h>
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/osrng.h>
@@ -75,13 +76,19 @@ CryptoContext<DCRTPoly> gen_crypto_ctx(shared_ptr<CCParams<CryptoContextBFVRNS>>
   return ctx;
 }
 
-vector<CryptoPP::byte> blake2b(const string x, const size_t len)
+vector<uint8_t> sha384(const string x)
 {
-  vector<CryptoPP::byte> digest(len);
-  CryptoPP::BLAKE2b hash;
-  hash.Update((const CryptoPP::byte *)x.data(), x.size());
-  hash.TruncatedFinal(digest.data(), len);
-  return digest;
+  uint32_t digest_length = SHA384_DIGEST_LENGTH;
+  const EVP_MD *algorithm = EVP_sha3_384();
+  uint8_t *digest = static_cast<uint8_t *>(OPENSSL_malloc(digest_length));
+  EVP_MD_CTX *context = EVP_MD_CTX_new();
+  EVP_DigestInit_ex(context, algorithm, nullptr);
+  EVP_DigestUpdate(context, x.c_str(), x.size());
+  EVP_DigestFinal_ex(context, digest, &digest_length);
+  EVP_MD_CTX_destroy(context);
+  vector<uint8_t> output(digest, digest + digest_length);
+  OPENSSL_free(digest);
+  return output;
 }
 
 inline size_t n_hashes_in_pt(PackingType pack_type, size_t poly_mod_deg, size_t plain_mod_bits, size_t nbits_entry)

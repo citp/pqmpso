@@ -35,7 +35,7 @@ target_include_directories(pqmpso PRIVATE ${CMAKE_BINARY_DIR}/include)
 target_include_directories(pqmpso PUBLIC /usr/local/include/openfhe/core)
 target_include_directories(pqmpso PUBLIC /usr/local/include/openfhe/pke)
 target_include_directories(pqmpso PUBLIC /usr/local/include/openfhe)
-target_link_libraries(pqmpso PUBLIC cryptopp pthread)
+target_link_libraries(pqmpso PUBLIC cryptopp pthread ssl crypto)
 
 # add_executable(pqmpso_test tests.cpp)
 # target_include_directories(pqmpso_test PRIVATE ${CMAKE_BINARY_DIR}/include)
