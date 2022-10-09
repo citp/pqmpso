@@ -184,7 +184,7 @@ size_t get_intersection_size(vector<vector<string>> &data, bool iu)
   return I.size();
 }
 
-void gen_random_data(vector<vector<string>> &ret, size_t n_parties, size_t x0, size_t xi, size_t int_sz, bool iu)
+void gen_random_data(vector<vector<string>> &ret, size_t n_parties, size_t x0, size_t xi, size_t int_sz, bool iu, bool run_sum)
 {
   cout << "Generating random data...";
   vector<string> int_strs = random_strings(int_sz);

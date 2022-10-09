@@ -29,20 +29,15 @@ struct Delegate
 
     sw.start();
 
-    cout << "Generating keys... ";
     KeyPair<DCRTPoly> kp = party.bfv_ctx->KeyGen();
     sk = kp.secretKey;
     party.pro_parms.pk = kp.publicKey;
-    cout << "generated." << endl;
 
-    cout << "Packing plaintexts... ";
     HashMap hm(party.pro_parms);
     hm.insert(X);
     vector<PT> pt;
     hm.serialize(party.bfv_ctx, pt, true);
-    cout << "packed." << endl;
 
-    cout << "Encrypting plaintexts... ";
     vector<CT> M;
     party.encrypt_all(M, pt);
 
@@ -61,8 +56,8 @@ struct Delegate
     sw.start();
 
     size_t int_size = party.decrypt_check_all(sk, *B);
-    printf("\nTime: %5.2fs\n", sw.elapsed());
-
+    printf("Time: %5.2fs\n", sw.elapsed());
+    cout << int_size << endl;
     return int_size;
   }
 };

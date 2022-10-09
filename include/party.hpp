@@ -174,72 +174,36 @@ struct Party
     // printf("randomized %lu plaintexts from ciphertexts (took %5.2fs).", A.size(), sw.elapsed());
   }
 
-  /* -------------------------------------- */
-
-  void mpsiu(const vector<CT> *M, vector<CT> *R, const vector<string> &X)
+  void prepare_hashmap(HashMap &hm, vector<PT> &hm_pt, vector<PT> &hm_1hot, vector<PT> &hm_0hot, const vector<string> &X)
   {
-    Stopwatch sw;
-
-    print_line();
-    cout << "MPSIU: Party " << pro_parms.party_id << endl;
-    print_line();
-
-    sw.start();
-
-    HashMap hm(pro_parms);
-    vector<PT> hm_pt(M->size()), hm_1hot(M->size()), hm_0hot(M->size());
-
     hm.insert(X);
     hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
     hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
     hm.serialize(bfv_ctx, hm_pt, (pro_parms.party_id == 1));
-
-    // Compute R => R + (M - Enc(hm))
-    cout << "Computing R => R + (M - Enc(hm))" << endl;
-    vector<CT> Mdiff_temp(M->size());
-    subtract_all(*M, hm_pt, Mdiff_temp);
-
-    if (pro_parms.party_id == 1)
-    {
-      *R = Mdiff_temp;
-    }
-    else
-    {
-      vector<CT> Mdiff(M->size()), Rdiff(M->size());
-      multiply_all(Mdiff_temp, hm_1hot, Mdiff);
-      multiply_all(*R, hm_0hot, Rdiff);
-      add_all_inplace(Rdiff, Mdiff);
-      *R = Rdiff;
-    }
-
-    // The last party randomizes the ciphertexts
-    if (pro_parms.party_id == pro_parms.num_parties - 1)
-      randomize_all_inplace(*R);
-
-    printf("\nTime: %5.2fs\n", sw.elapsed());
   }
 
-  void mpsi(const vector<CT> *M, vector<CT> *R, const vector<string> &X)
+  /* -------------------------------------- */
+
+  void compute_on_r(const vector<CT> *M, vector<CT> *R, const vector<string> &X, bool iu, bool run_sum)
   {
     Stopwatch sw;
 
     print_line();
-    cout << "MPSI: Party " << pro_parms.party_id << endl;
+    string protocol = string(iu ? "MPSIU" : "MPSI") + string(run_sum ? "-Sum" : "");
+    cout << protocol << ": Party " << pro_parms.party_id << endl;
     print_line();
 
     sw.start();
 
     HashMap hm(pro_parms);
-    vector<PT> hm_pt(M->size()), hm_1hot(M->size()), hm_0hot(M->size());
+    size_t m_sz = M->size();
+    vector<PT> hm_pt(m_sz), hm_1hot(m_sz), hm_0hot(m_sz);
 
-    hm.insert(X);
-    hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
-    hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
-    hm.serialize(bfv_ctx, hm_pt, (pro_parms.party_id == 1));
+    prepare_hashmap(hm, hm_pt, hm_1hot, hm_0hot, X);
 
     // Compute R => R + (M - Enc(hm))
     cout << "Computing R => R + (M - Enc(hm))" << endl;
-    vector<CT> Mdiff_temp(M->size());
+    vector<CT> Mdiff_temp(m_sz);
     subtract_all(*M, hm_pt, Mdiff_temp);
 
     if (pro_parms.party_id == 1)
@@ -248,11 +212,20 @@ struct Party
     }
     else
     {
-      vector<CT> Mdiff(M->size());
-      multiply_all(Mdiff_temp, hm_1hot, Mdiff);
-      // multiply_all(*R, hm_0hot, Rdiff);
-      add_all_inplace(*R, Mdiff);
-      // *R = Rdiff;
+      if (iu)
+      {
+        vector<CT> Mdiff(m_sz), Rdiff(m_sz);
+        multiply_all(Mdiff_temp, hm_1hot, Mdiff);
+        multiply_all(*R, hm_0hot, Rdiff);
+        add_all_inplace(Rdiff, Mdiff);
+        *R = Rdiff;
+      }
+      else
+      {
+        vector<CT> Mdiff(m_sz);
+        multiply_all(Mdiff_temp, hm_1hot, Mdiff);
+        add_all_inplace(*R, Mdiff);
+      }
     }
 
     // The last party randomizes the ciphertexts

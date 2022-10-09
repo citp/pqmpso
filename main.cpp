@@ -8,10 +8,12 @@
 using namespace std;
 // using namespace lbcrypto;
 
-void print_parameters(bool iu, int n, int x0, int xi, int int_sz, int map_sz, string dir, bool v, int nthreads)
+void print_parameters(bool iu, bool run_sum, int n, int x0, int xi, int int_sz, int map_sz, string dir, bool v, int nthreads)
 {
   print_sep();
-  cout << "Protocol\t" << (iu ? "MPSIU" : "MPSI") << endl;
+  string protocol = string(iu ? "MPSIU" : "MPSI") + string(run_sum ? "-Sum" : "");
+  cout
+      << "Protocol\t" << protocol << endl;
   cout << "#Parties\t" << n << endl;
   cout << "|X_0|\t\t" << x0 << endl;
   cout << "|X_i|\t\t" << xi << endl;
@@ -32,6 +34,10 @@ int main(int argc, char *argv[])
       .implicit_value(true);
 
   program.add_argument("--iu")
+      .default_value(false)
+      .implicit_value(true);
+
+  program.add_argument("--sum")
       .default_value(false)
       .implicit_value(true);
 
@@ -96,6 +102,7 @@ int main(int argc, char *argv[])
 
   auto read = program.get<bool>("--read");
   auto iu = program.get<bool>("--iu");
+  auto run_sum = program.get<bool>("--sum");
   auto n = program.get<int>("--n");
   auto x0 = program.get<int>("--x0");
   auto xi = program.get<int>("--xi");
@@ -113,13 +120,13 @@ int main(int argc, char *argv[])
   else if (pack_type_str == "single")
     pack_type = SINGLE;
 
-  print_parameters(iu, n, x0, xi, int_sz, map_sz, dir, v, nthreads);
+  print_parameters(iu, run_sum, n, x0, xi, int_sz, map_sz, dir, v, nthreads);
 
   vector<vector<string>> data(n);
   if (read)
     read_data(data, x0, xi, dir);
   else
-    gen_random_data(data, n, x0, xi, int_sz, iu);
+    gen_random_data(data, n, x0, xi, int_sz, iu, run_sum);
 
   assert((size_t)int_sz == get_intersection_size(data, iu));
 
@@ -144,21 +151,7 @@ int main(int argc, char *argv[])
   {
     pro_parms.party_id = i + 1;
     providers[i] = Party(enc_parms, pro_parms);
-    if (iu)
-      providers[i].mpsiu(&M, &R, data[i + 1]);
-    else
-      providers[i].mpsi(&M, &R, data[i + 1]);
+    providers[i].compute_on_r(&M, &R, data[i + 1], iu, run_sum);
   }
-  cout << "Computed intersection size = " << endl
-       << del.finish(&R) << endl;
-
-  // cout << "Set encryption parameters and print" << endl;
-  //
-  // SEALContext context(parms);
-  // cout << "Parameter validatijbvcfk/'m on (success): " << context.parameter_error_message() << endl;
-
-  // HashMap<seal::Ciphertext> hm = New<seal::Ciphertext>(10, 50);
-  // Ciphertext x_encrypted;
-  // string x = "hello";
-  // Insert<seal::Ciphertext>(hm, x, x_encrypted);
+  del.finish(&R);
 }
