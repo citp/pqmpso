@@ -19,7 +19,7 @@ struct Delegate
 
   /* -------------------------------------- */
 
-  vector<CT> start(vector<string> &X)
+  vector<CT> start(vector<string> &X, vector<int64_t> &ad)
   {
     Stopwatch sw;
 
@@ -34,7 +34,10 @@ struct Delegate
     party.pro_parms.pk = kp.publicKey;
 
     HashMap hm(party.pro_parms);
-    hm.insert(X);
+    if (party.pro_parms.with_ad)
+      hm.insert(X, ad);
+    else
+      hm.insert(X);
     vector<PT> pt;
     hm.serialize(party.bfv_ctx, pt, true);
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-// #include <seal/seal.h>
 #include <cassert>
 #include <set>
 
@@ -16,6 +15,7 @@ struct HashMap
   size_t n, sz, n_bits, num_pt, plain_mod_bits, poly_mod_deg, plain_mod;
   vector<vector<uint8_t>> data;
   PackingType pack_type;
+  vector<int64_t> ad_data;
 
   HashMap(ProtocolParameters &pro_parms)
   {
@@ -24,6 +24,8 @@ struct HashMap
     pack_type = pro_parms.pack_type;
     n_bits = get_bitsize(n);
     data = vector<vector<uint8_t>>(n);
+    if (pro_parms.with_ad)
+      ad_data = vector<int64_t>(n);
   }
 
   /* -------------------------------------- */
@@ -38,12 +40,23 @@ struct HashMap
 
   /* -------------------------------------- */
 
-  void
-  insert(const vector<string> &X)
+  void insert(const vector<string> &X)
   {
     for (auto x : X)
-    {
       data[get_map_index(x)] = sha384(x + "||**VALUE**||");
+  }
+
+  void insert(const vector<string> &X, const vector<int64_t> &ad)
+  {
+    assert(X.size() == ad.size());
+    for (size_t i = 0; i < X.size(); i++)
+    {
+      vector<int64_t> int_vec;
+      size_t idx = get_map_index(X[i]);
+      data[idx] = sha384(X[i] + "||**VALUE**||");
+      pack_base_int_arr(int_vec, ad[idx], 2);
+
+      // ad_data[idx] = ad[]
     }
   }
 

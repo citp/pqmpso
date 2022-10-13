@@ -41,6 +41,10 @@ int main(int argc, char *argv[])
       .default_value(false)
       .implicit_value(true);
 
+  program.add_argument("--in-bits")
+      .default_value(false)
+      .implicit_value(true);
+
   program.add_argument("--n")
       .default_value(4)
       .help("number of parties (including delegate)")
@@ -113,6 +117,16 @@ int main(int argc, char *argv[])
   auto gen_only = program.get<bool>("--gen");
   auto pack_type_str = program.get<string>("--pack");
   auto nthreads = program.get<int>("--t");
+  auto in_bits = program.get<bool>("--in-bits");
+
+  if (in_bits)
+  {
+    n = (1 << n);
+    x0 = (1 << x0);
+    xi = (1 << xi);
+    int_sz = (1 << int_sz);
+    map_sz = (1 << map_sz);
+  }
 
   PackingType pack_type = MULTIPLE_COMPACT;
   if (pack_type_str == "multiple")
@@ -140,13 +154,13 @@ int main(int argc, char *argv[])
   if (gen_only)
     exit(0);
 
-  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, pack_type, NULL};
+  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, run_sum, pack_type, NULL};
 
   shared_ptr<CCParams<CryptoContextBFVRNS>> enc_parms = gen_enc_params();
   Delegate del(enc_parms, pro_parms);
   vector<Party> providers(n - 1);
 
-  vector<CT> M = del.start(data[0]);
+  vector<CT> M = del.start(data[0], ad);
   vector<CT> R(M.size());
   pro_parms.pk = del.party.pro_parms.pk;
   for (int i = 0; i < n - 1; i++)

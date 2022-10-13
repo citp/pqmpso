@@ -3,19 +3,15 @@
 #include <vector>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
-#include <cryptopp/blake2.h>
-#include <cryptopp/cryptlib.h>
-#include <cryptopp/osrng.h>
-
-#include "utils.hpp"
-#include "BS_thread_pool.hpp"
-
+#include <openssl/rand.h>
 #include "openfhe.h"
-
 #include "ciphertext-ser.h"
 #include "cryptocontext-ser.h"
 #include "key/key-ser.h"
 #include "scheme/bfvrns/bfvrns-ser.h"
+
+#include "utils.hpp"
+#include "BS_thread_pool.hpp"
 
 using namespace std;
 using namespace lbcrypto;
@@ -37,6 +33,7 @@ enum PackingType
 struct ProtocolParameters
 {
   size_t party_id, num_parties, map_sz, hash_sz, num_threads;
+  bool with_ad;
   PackingType pack_type;
   PK pk;
 };
@@ -45,7 +42,7 @@ struct ProtocolParameters
 
 void random_bytes(uint8_t *buf, size_t sz)
 {
-  CryptoPP::OS_GenerateRandomBlock(false, buf, sz);
+  RAND_bytes(buf, sz);
 }
 
 shared_ptr<CCParams<CryptoContextBFVRNS>> gen_enc_params()
@@ -57,14 +54,17 @@ shared_ptr<CCParams<CryptoContextBFVRNS>> gen_enc_params()
   parms->SetEvalAddCount(0);
   // parms->SetBatchSize(2048);
   // parms->SetDigitSize(2048);
-  parms->SetRingDim(4096);
-  // parms->SetFirstModSize(54);
-  // parms->SetScalingModSize(49);
-  // parms->SetSecurityLevel(HEStd_128_classic);
+  parms->SetRingDim(8192);
+  // parms->SetFirstModSize(35);
+  parms->SetScalingModSize(0);
+  parms->SetSecurityLevel(HEStd_192_classic);
   // parameters.SetMaxRelinSkDeg(3);
+  cout << "Secret Key Distribution: " << parms->GetSecretKeyDist() << endl;
   cout << "Ring Dimension: " << parms->GetRingDim() << endl;
   cout << "Plaintext Modulus: " << parms->GetPlaintextModulus() << endl;
   cout << "First Mod Size: " << parms->GetFirstModSize() << endl;
+  cout << "Scaling Mod Size: " << parms->GetScalingModSize() << endl;
+  cout << "Security Level: " << parms->GetSecurityLevel() << endl;
   return parms;
 }
 
@@ -73,6 +73,7 @@ CryptoContext<DCRTPoly> gen_crypto_ctx(shared_ptr<CCParams<CryptoContextBFVRNS>>
   CryptoContext<DCRTPoly> ctx = GenCryptoContext(*enc_parms);
   ctx->Enable(PKE);
   ctx->Enable(LEVELEDSHE);
+  ctx->Enable(MULTIPARTY);
   return ctx;
 }
 
@@ -80,15 +81,13 @@ vector<uint8_t> sha384(const string x)
 {
   uint32_t digest_length = SHA384_DIGEST_LENGTH;
   const EVP_MD *algorithm = EVP_sha3_384();
-  uint8_t *digest = static_cast<uint8_t *>(OPENSSL_malloc(digest_length));
+  vector<uint8_t> digest(digest_length);
   EVP_MD_CTX *context = EVP_MD_CTX_new();
   EVP_DigestInit_ex(context, algorithm, nullptr);
   EVP_DigestUpdate(context, x.c_str(), x.size());
-  EVP_DigestFinal_ex(context, digest, &digest_length);
+  EVP_DigestFinal_ex(context, digest.data(), &digest_length);
   EVP_MD_CTX_destroy(context);
-  vector<uint8_t> output(digest, digest + digest_length);
-  OPENSSL_free(digest);
-  return output;
+  return digest;
 }
 
 inline size_t n_hashes_in_pt(PackingType pack_type, size_t poly_mod_deg, size_t plain_mod_bits, size_t nbits_entry)
@@ -226,5 +225,15 @@ void unpack_multiple_compact(PT &pt, vector<vector<uint8_t>> *unpacked, size_t n
     // for (size_t j = 0; j < num_cf_per_hash; j++)
     //   memcpy(&((*unpacked)[i].data()[j * 2]), &(int_vec.data()[num_cf_per_hash * i + j]), 2);
     memcpy((*unpacked)[i].data(), &(int_vec.data()[num_cf_per_hash * i]), num_bytes_per_hash);
+  }
+}
+
+void pack_base_int_arr(vector<int64_t> &int_vec, const size_t a, const size_t b)
+{
+  size_t rem = a;
+  while (rem > 0)
+  {
+    int_vec.push_back(rem % b);
+    rem /= b;
   }
 }

@@ -2,7 +2,7 @@
 #include <algorithm>
 
 #include "ut.hpp"
-// #include "crypto.hpp"
+#include "crypto.hpp"
 
 #include "openfhe.h"
 
@@ -15,27 +15,95 @@ using namespace boost::ut;
 using namespace lbcrypto;
 using namespace std;
 
+// base is b
+// void pack_base_int_arr(vector<int64_t> &int_vec, const size_t a, const size_t b)
+// {
+//   size_t rem = a;
+//   while (rem > 0)
+//   {
+//     int_vec.push_back(rem % b);
+//     rem /= b;
+//   }
+// }
+
+size_t unpack_base_int_arr(const vector<int64_t> &int_vec, const size_t b)
+{
+  size_t s = 0, pw = 1;
+  for (size_t i = 0; i < int_vec.size(); i++)
+  {
+    int64_t val = (int_vec[i] >= 0) ? int_vec[i] : int_vec[i] + b;
+    s += (val * pw);
+    pw *= b;
+  }
+  return s;
+}
+
+void print_vec(vector<int64_t> &int_vec)
+{
+  size_t sz = int_vec.size();
+  cout << "size: " << sz << endl;
+  for (size_t i = 0; i < sz; i++)
+  {
+    cout << int_vec[i] << " ";
+  }
+  cout << endl;
+}
+
 int main()
 {
   CCParams<CryptoContextBFVRNS> enc_params;
-  enc_params.SetPlaintextModulus(2);
-  enc_params.SetMultiplicativeDepth(1);
+  enc_params.SetPlaintextModulus(65537);
+  // enc_params.SetMultiplicativeDepth(1);
   CryptoContext<DCRTPoly> ctx = GenCryptoContext(enc_params);
   ctx->Enable(PKE);
   ctx->Enable(KEYSWITCH);
   ctx->Enable(LEVELEDSHE);
 
-  "MPSIU"_test = [ctx]
+  // "MPSIU"_test = [ctx]
+  // {
+  //   KeyPair<DCRTPoly> keyPair = ctx->KeyGen();
+  //   cout << "The key pair has been generated." << endl;
+
+  //   std::vector<int64_t> vectorOfInts1 = {1, 0, 1, 0, 1, 0};
+  //   Plaintext plaintext1 = ctx->MakePackedPlaintext(vectorOfInts1);
+
+  //   std::cout << "\nOriginal Plaintext #1: \n";
+  //   std::cout << plaintext1 << std::endl;
+  // };
+
+  "Sum"_test = [ctx]
   {
-    KeyPair<DCRTPoly> keyPair = ctx->KeyGen();
+    KeyPair<DCRTPoly> kp = ctx->KeyGen();
     cout << "The key pair has been generated." << endl;
 
-    std::vector<int64_t> vectorOfInts1 = {1, 0, 1, 0, 1, 0};
-    Plaintext plaintext1 = ctx->MakePackedPlaintext(vectorOfInts1);
+    size_t ntests = 100, base = 65537, count = 0;
+    random_device rd;
+    mt19937 generator(rd());
+    vector<CT> ct(ntests);
+    CT ct_sum;
 
-    std::cout << "\nOriginal Plaintext #1: \n";
-    std::cout << plaintext1 << std::endl;
+    for (size_t i = 0; i < ntests; i++)
+    {
+      size_t num = generator() % UINT64_MAX;
+      vector<int64_t> vec1;
+      pack_base_int_arr(vec1, num, base);
+      expect(num == unpack_base_int_arr(vec1, base));
+      ct[i] = ctx->Encrypt(kp.publicKey, ctx->MakePackedPlaintext(vec1));
+      Plaintext pt;
+      ctx->Decrypt(kp.secretKey, ct[i], &pt);
+      expect(num == unpack_base_int_arr(pt->GetPackedValue(), base));
+      if (i == 0)
+        ct_sum = ct[i];
+      else
+        ctx->EvalAddInPlace(ct_sum, ct[i]);
+      count += num;
+    }
+    cout << "actual count: " << count << endl;
+    PT pt_sum;
+    ctx->Decrypt(kp.secretKey, ct_sum, &pt_sum);
+    cout << "decrypted count: " << unpack_base_int_arr(pt_sum->GetPackedValue(), base) << endl;
   };
+
   return 0;
 }
 

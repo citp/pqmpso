@@ -243,7 +243,7 @@ void gen_random_data(vector<vector<string>> &ret, vector<int64_t> &ad, size_t n_
   {
     ad.resize(ret[0].size());
     for (size_t i = 0; i < ad.size(); i++)
-      ad[i] = generator() % 1000;
+      ad[i] = generator() % 65537;
   }
 
   cout << " generated." << endl;
