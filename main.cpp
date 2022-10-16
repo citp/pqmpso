@@ -140,34 +140,68 @@ int main(int argc, char *argv[])
   vector<int64_t> ad;
 
   if (read)
-    read_data(data, ad, x0, xi, dir);
+    read_data(data, ad, x0, xi, dir, run_sum);
   else
     gen_random_data(data, ad, n, x0, xi, int_sz, iu, run_sum);
 
   assert((size_t)int_sz == get_intersection_size(data, iu));
 
   if (!read)
-    write_data(data, dir);
+    write_data(data, ad, dir);
 
   print_sep();
 
   if (gen_only)
     exit(0);
 
-  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, run_sum, pack_type, NULL};
+  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, run_sum, pack_type, nullptr, nullptr};
 
-  shared_ptr<CCParams<CryptoContextBFVRNS>> enc_parms = gen_enc_params();
-  Delegate del(enc_parms, pro_parms);
+  shared_ptr<CCParams<CryptoContextBFVRNS>> bfv_parms = gen_bfv_params();
+  shared_ptr<CCParams<CryptoContextCKKSRNS>> ckks_parms = gen_ckks_params();
+
+  Delegate del(pro_parms, bfv_parms, ckks_parms);
   vector<Party> providers(n - 1);
 
-  vector<CT> M = del.start(data[0], ad);
-  vector<CT> R(M.size());
   pro_parms.pk = del.party.pro_parms.pk;
+  pro_parms.ek = del.party.pro_parms.ek;
+  PK apk;
+  shared_ptr<EvalKeys> ask = make_shared<EvalKeys>();
+  if (run_sum)
+    del.party.key_aggregation(nullptr, ask);
+
   for (int i = 0; i < n - 1; i++)
   {
     pro_parms.party_id = i + 1;
-    providers[i] = Party(enc_parms, pro_parms);
+    providers[i] = Party(pro_parms, bfv_parms, ckks_parms);
+    if (run_sum)
+      apk = providers[i].key_aggregation(apk, ask);
+  }
+
+  del.party.pro_parms.apk = apk;
+  del.party.pro_parms.ask = ask;
+  Tuple<vector<CT>> M = del.start(data[0], ad);
+  Tuple<vector<CT>> R;
+  R.e0 = vector<CT>(M.e0.size());
+  R.e1 = vector<CT>(M.e1.size());
+  for (int i = 0; i < n - 1; i++)
+  {
+    if (run_sum)
+    {
+      providers[i].pro_parms.apk = apk;
+      providers[i].pro_parms.ask = ask;
+    }
     providers[i].compute_on_r(&M, &R, data[i + 1], iu, run_sum);
   }
   del.finish(&R);
+  // vector<CT> agg_res = del.finish(&R);
+  // vector<CT> agg_res_parts(n);
+  // agg_res_parts[0] = del.party.joint_decrypt(agg_res)[0];
+  // for (int i = 1; i < n; i++)
+  //   agg_res_parts[i] = providers[i - 1].joint_decrypt(agg_res)[0];
+  // PT agg_pt = del.joint_decrypt(agg_res_parts);
+  // agg_pt->SetLength(1);
+  // cout << agg_pt << endl;
+
+  // vector<complex<double>> int_sum_vec = agg_pt->GetCKKSPackedValue();
+  // cout << "Computed intersection-sum: " << int_sum_vec[0].real << endl;
 }

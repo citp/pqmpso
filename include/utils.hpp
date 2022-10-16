@@ -37,6 +37,18 @@ struct Stopwatch
 
 /* -------------------------------------- */
 
+void print_vec(const vector<complex<double>> &vec, size_t sz)
+{
+  if (sz == 0)
+    sz = vec.size();
+  cout << "size: " << sz << endl;
+  for (size_t i = 0; i < sz; i++)
+  {
+    cout << vec[i] << " ";
+  }
+  cout << endl;
+}
+
 inline size_t
 get_bitsize(size_t x)
 {
@@ -106,11 +118,27 @@ int64_t random_int(size_t mod)
 
 /* -------------------------------------- */
 
+void write(vector<int64_t> &vec, string fpath)
+{
+  ofstream out_file(fpath);
+  for (const auto &e : vec)
+    out_file << e << "\n";
+}
+
 void write(vector<string> &vec, string fpath)
 {
   ofstream out_file(fpath);
   for (const auto &e : vec)
     out_file << e << "\n";
+}
+
+void read(vector<int64_t> &vec, string fpath)
+{
+  ifstream in_file(fpath);
+  for (size_t i = 0; i < vec.size(); i++)
+  {
+    in_file >> vec[i];
+  }
 }
 
 void read(vector<string> &vec, string fpath)
@@ -122,7 +150,7 @@ void read(vector<string> &vec, string fpath)
   }
 }
 
-void write_data(vector<vector<string>> &data, string dirpath)
+void write_data(vector<vector<string>> &data, vector<int64_t> &ad, string dirpath)
 {
   cout << "Writing data..." << endl;
   for (size_t i = 0; i < data.size(); i++)
@@ -131,9 +159,11 @@ void write_data(vector<vector<string>> &data, string dirpath)
     write(data[i], path);
     cout << "\tWrote to " << path << "." << endl;
   }
+  if (ad.size() > 0)
+    write(ad, dirpath + "/0-AD.dat");
 }
 
-void read_data(vector<vector<string>> &data, vector<int64_t> &ad, size_t x0, size_t xi, string dirpath)
+void read_data(vector<vector<string>> &data, vector<int64_t> &ad, size_t x0, size_t xi, string dirpath, bool with_ad)
 {
   cout << "Reading data..." << endl;
   for (size_t i = 0; i < data.size(); i++)
@@ -142,6 +172,11 @@ void read_data(vector<vector<string>> &data, vector<int64_t> &ad, size_t x0, siz
     string path = dirpath + "/" + to_string(i) + ".dat";
     read(data[i], path);
     cout << "\tRead from " << path << "." << endl;
+  }
+  if (with_ad)
+  {
+    ad.resize(x0);
+    read(ad, dirpath + "/0-AD.dat");
   }
 }
 

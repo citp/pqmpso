@@ -22,6 +22,7 @@ typedef Plaintext PT;
 typedef Ciphertext<DCRTPoly> CT;
 typedef PublicKey<DCRTPoly> PK;
 typedef PrivateKey<DCRTPoly> SK;
+typedef map<usint, EvalKey<DCRTPoly>> EvalKeys;
 
 enum PackingType
 {
@@ -35,7 +36,14 @@ struct ProtocolParameters
   size_t party_id, num_parties, map_sz, hash_sz, num_threads;
   bool with_ad;
   PackingType pack_type;
-  PK pk;
+  PK pk, apk;
+  shared_ptr<EvalKeys> ek, ask;
+};
+
+template <typename T>
+struct Tuple
+{
+  T e0, e1;
 };
 
 /* -------------------------------------- */
@@ -45,26 +53,42 @@ void random_bytes(uint8_t *buf, size_t sz)
   RAND_bytes(buf, sz);
 }
 
-shared_ptr<CCParams<CryptoContextBFVRNS>> gen_enc_params()
+shared_ptr<CCParams<CryptoContextBFVRNS>> gen_bfv_params()
 {
   shared_ptr<CCParams<CryptoContextBFVRNS>> parms = make_shared<CCParams<CryptoContextBFVRNS>>();
   // parms->SetToDefaults(BFVRNS_SCHEME);
   parms->SetPlaintextModulus(65537);
+  // parms->SetPlaintextModulus(4294967297);
   parms->SetMultiplicativeDepth(1);
   parms->SetEvalAddCount(0);
   // parms->SetBatchSize(2048);
   // parms->SetDigitSize(2048);
   parms->SetRingDim(8192);
   // parms->SetFirstModSize(35);
-  parms->SetScalingModSize(0);
+  // parms->SetScalingModSize(0);
   parms->SetSecurityLevel(HEStd_192_classic);
   // parameters.SetMaxRelinSkDeg(3);
-  cout << "Secret Key Distribution: " << parms->GetSecretKeyDist() << endl;
+  // cout << "Secret Key Distribution: " << parms->GetSecretKeyDist() << endl;
   cout << "Ring Dimension: " << parms->GetRingDim() << endl;
   cout << "Plaintext Modulus: " << parms->GetPlaintextModulus() << endl;
   cout << "First Mod Size: " << parms->GetFirstModSize() << endl;
+  cout << "Security Level: " << parms->GetSecurityLevel() << endl;
+  print_sep();
+  return parms;
+}
+
+shared_ptr<CCParams<CryptoContextCKKSRNS>> gen_ckks_params()
+{
+  shared_ptr<CCParams<CryptoContextCKKSRNS>> parms = make_shared<CCParams<CryptoContextCKKSRNS>>();
+  parms->SetMultiplicativeDepth(30);
+  parms->SetSecurityLevel(HEStd_192_classic);
+  parms->SetRingDim(65536);
+  parms->SetBatchSize(32768);
+  parms->SetScalingModSize(59);
   cout << "Scaling Mod Size: " << parms->GetScalingModSize() << endl;
   cout << "Security Level: " << parms->GetSecurityLevel() << endl;
+  cout << "Batch Size: " << parms->GetBatchSize() << endl;
+  print_sep();
   return parms;
 }
 
@@ -73,6 +97,16 @@ CryptoContext<DCRTPoly> gen_crypto_ctx(shared_ptr<CCParams<CryptoContextBFVRNS>>
   CryptoContext<DCRTPoly> ctx = GenCryptoContext(*enc_parms);
   ctx->Enable(PKE);
   ctx->Enable(LEVELEDSHE);
+  ctx->Enable(MULTIPARTY);
+  return ctx;
+}
+
+CryptoContext<DCRTPoly> gen_crypto_ctx(shared_ptr<CCParams<CryptoContextCKKSRNS>> &enc_parms)
+{
+  CryptoContext<DCRTPoly> ctx = GenCryptoContext(*enc_parms);
+  ctx->Enable(PKE);
+  ctx->Enable(LEVELEDSHE);
+  ctx->Enable(ADVANCEDSHE);
   ctx->Enable(MULTIPARTY);
   return ctx;
 }
@@ -146,20 +180,17 @@ void unpack_bitwise_single(PT &pt, vector<uint8_t> *unpacked, size_t nbits)
 
 void pack_bitwise_multiple(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, size_t nbits, bool fill_random)
 {
-  vector<int64_t> int_vec(nbits * count);
+  size_t ring_dim = bfv_ctx->GetRingDimension();
+  vector<int64_t> int_vec(ring_dim);
   for (size_t i = 0; i < count; i++)
   {
     pack_bitwise_int_arr(&int_vec, &to_pack->at(start_idx + i), i * nbits);
   }
-  // size_t ring_dim = bfv_ctx->GetRingDimension();
-  // if (fill_random)
-  // {
-  //   size_t plain_mod = bfv_ctx->GetEncodingParams()->GetPlaintextModulus();
-  //   int_vec.resize(ring_dim);
-  //   for (size_t i = nbits * count; i < ring_dim; i++)
-  //     int_vec[i] = random_int(plain_mod);
-  // }
-
+  if (fill_random)
+  {
+    for (size_t i = nbits * count; i < ring_dim; i++)
+      int_vec[i] = random_int(2);
+  }
   *pt = bfv_ctx->MakePackedPlaintext(int_vec);
 }
 
@@ -193,13 +224,14 @@ inline void pack_compact_int_arr(vector<int64_t> *int_vec, vector<uint8_t> *to_p
 // }
 
 // start_idx in to_pack
-void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, bool fill_random)
+void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, size_t num_cf_per_hash, bool fill_random)
 {
   size_t ring_dim = bfv_ctx->GetRingDimension();
   vector<int64_t> int_vec(ring_dim);
-  size_t num_cf_per_hash = ring_dim / count;
   for (size_t i = 0; i < count; i++)
     pack_compact_int_arr(&int_vec, &to_pack->at(start_idx + i), num_cf_per_hash * i);
+  for (size_t i = count * num_cf_per_hash; i < ring_dim; i++)
+    int_vec[i] = random_int(65537);
   *pt = bfv_ctx->MakePackedPlaintext(int_vec);
 }
 
