@@ -123,8 +123,8 @@ struct Party
     // bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
     // ckks_ctx->InsertEvalSumKey(pro_parms.ask);
 
-    if (pro_parms.party_id == pro_parms.num_parties - 1)
-      bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
+    // if (pro_parms.party_id == pro_parms.num_parties - 1)
+    //   bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
   }
 
   /* -------------------------------------- */
@@ -168,9 +168,9 @@ struct Party
       }
       cout << "Computing Sum of Coefficients..." << endl;
       result = ckks_ctx->EvalSum(result, num_hashes_per_pt);
-      ckks_ctx->Decrypt(ckks_sk, result, &res_pt);
-      res_pt->SetLength(1);
-      cout << res_pt << endl;
+      // ckks_ctx->Decrypt(ckks_sk, result, &res_pt);
+      // res_pt->SetLength(1);
+      // cout << res_pt << endl;
     }
     return count;
   }
@@ -272,26 +272,54 @@ struct Party
       return ckks_ctx->MultipartyDecryptMain(agg_res, sk_i);
   }
 
-  PK key_aggregation(const PK prev_pk, shared_ptr<EvalKeys> &prev_sum_keys)
+  /*
+    apk   Agg. Public Key
+    ask   Agg. EvalSum Key
+    aak   Agg. EvalAuto key
+  */
+  void key_agg(PK &apk, shared_ptr<EvalKeys> &ask, EvalKey<DCRTPoly> &aak)
   {
     KeyPair<DCRTPoly> kp;
-    if (prev_pk != NULL)
+    if (pro_parms.party_id == 0)
     {
-      kp = ckks_ctx->MultipartyKeyGen(prev_pk);
-      auto new_sum_keys = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, prev_sum_keys, kp.publicKey->GetKeyTag());
-      prev_sum_keys = ckks_ctx->MultiAddEvalSumKeys(prev_sum_keys, new_sum_keys, kp.publicKey->GetKeyTag());
-      // prev_sum_keys = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, prev_sum_keys);
-      // prev_sum_keys = ckks_ctx->MultiAddEvalSumKeys(prev_sum_keys, )
+      kp = ckks_ctx->KeyGen();
+      ckks_ctx->EvalSumKeyGen(kp.secretKey, kp.publicKey);
+      *ask = ckks_ctx->GetEvalSumKeyMap(kp.secretKey->GetKeyTag());
+      aak = ckks_ctx->KeySwitchGen(kp.secretKey, kp.secretKey);
     }
     else
     {
-      kp = ckks_ctx->KeyGen();
-      ckks_ctx->EvalSumKeyGen(kp.secretKey);
-      *prev_sum_keys = ckks_ctx->GetEvalSumKeyMap(kp.secretKey->GetKeyTag());
+      kp = ckks_ctx->MultipartyKeyGen(apk);
+      shared_ptr<EvalKeys> ask_i = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, ask, kp.publicKey->GetKeyTag());
+      ask = ckks_ctx->MultiAddEvalSumKeys(ask, ask_i, kp.publicKey->GetKeyTag());
+      aak = ckks_ctx->MultiKeySwitchGen(kp.secretKey, kp.secretKey, aak);
     }
     sk_i = kp.secretKey;
-    return kp.publicKey;
+    apk = kp.publicKey;
+    // return kp.publicKey;
   }
+
+  // PK key_aggregation(const PK prev_pk, shared_ptr<EvalKeys> &prev_sum_keys)
+  // {
+  //   KeyPair<DCRTPoly> kp;
+  //   if (prev_pk != NULL)
+  //   {
+  //     kp = ckks_ctx->MultipartyKeyGen(prev_pk);
+  //     // ckks_ctx->MultiAddPubKeys
+  //     auto new_sum_keys = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, prev_sum_keys, kp.publicKey->GetKeyTag());
+  //     prev_sum_keys = ckks_ctx->MultiAddEvalSumKeys(prev_sum_keys, new_sum_keys, kp.publicKey->GetKeyTag());
+  //     // prev_sum_keys = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, prev_sum_keys);
+  //     // prev_sum_keys = ckks_ctx->MultiAddEvalSumKeys(prev_sum_keys, )
+  //   }
+  //   else
+  //   {
+  //     kp = ckks_ctx->KeyGen();
+  //     ckks_ctx->EvalSumKeyGen(kp.secretKey);
+  //     *prev_sum_keys = ckks_ctx->GetEvalSumKeyMap(kp.secretKey->GetKeyTag());
+  //   }
+  //   sk_i = kp.secretKey;
+  //   return kp.publicKey;
+  // }
 
   void compute_on_r(const Tuple<vector<CT>> *M, Tuple<vector<CT>> *R, const vector<string> &X, bool iu, bool run_sum)
   {

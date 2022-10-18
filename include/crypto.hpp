@@ -46,6 +46,12 @@ struct Tuple
   T e0, e1;
 };
 
+struct AggKeys
+{
+  PK apk;
+  EvalKeys ask;
+};
+
 /* -------------------------------------- */
 
 void random_bytes(uint8_t *buf, size_t sz)
@@ -80,11 +86,12 @@ shared_ptr<CCParams<CryptoContextBFVRNS>> gen_bfv_params()
 shared_ptr<CCParams<CryptoContextCKKSRNS>> gen_ckks_params()
 {
   shared_ptr<CCParams<CryptoContextCKKSRNS>> parms = make_shared<CCParams<CryptoContextCKKSRNS>>();
-  parms->SetMultiplicativeDepth(30);
+  parms->SetMultiplicativeDepth(16);
   parms->SetSecurityLevel(HEStd_192_classic);
-  parms->SetRingDim(65536);
+  // parms->SetRingDim(65536);
   parms->SetBatchSize(32768);
   parms->SetScalingModSize(59);
+  parms->SetMaxRelinSkDeg(16);
   cout << "Scaling Mod Size: " << parms->GetScalingModSize() << endl;
   cout << "Security Level: " << parms->GetSecurityLevel() << endl;
   cout << "Batch Size: " << parms->GetBatchSize() << endl;
@@ -108,6 +115,7 @@ CryptoContext<DCRTPoly> gen_crypto_ctx(shared_ptr<CCParams<CryptoContextCKKSRNS>
   ctx->Enable(LEVELEDSHE);
   ctx->Enable(ADVANCEDSHE);
   ctx->Enable(MULTIPARTY);
+  ctx->Enable(KEYSWITCH);
   return ctx;
 }
 
