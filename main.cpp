@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include "crypto.hpp"
 #include "utils.hpp"
 #include "hashmap.hpp"
@@ -6,7 +7,6 @@
 #include "delegate.hpp"
 
 using namespace std;
-// using namespace lbcrypto;
 
 void print_parameters(bool iu, bool run_sum, int n, int x0, int xi, int int_sz, int map_sz, string dir, bool v, int nthreads)
 {
@@ -25,12 +25,33 @@ void print_parameters(bool iu, bool run_sum, int n, int x0, int xi, int int_sz, 
   print_sep();
 }
 
-void run_key_aggregation(Delegate &del, vector<Party> &providers, PK &apk, shared_ptr<EvalKeys> &ask, EvalKey<DCRTPoly> &aak)
+size_t run_joint_decryption(Delegate &del, vector<Party> &providers, vector<CT> &agg_res)
 {
+  Stopwatch sw;
+  print_title("Joint Decryption");
+  sw.start();
+
+  vector<CT> agg_res_parts(providers.size() + 1);
+  agg_res_parts[0] = del.party.joint_decrypt(agg_res)[0];
+  for (size_t i = 1; i <= providers.size(); i++)
+    agg_res_parts[i] = providers[i - 1].joint_decrypt(agg_res)[0];
+  PT agg_pt = del.joint_decrypt_final(agg_res_parts);
+  agg_pt->SetLength(1);
+
+  printf("\nTime: %5.2fs\n", sw.elapsed());
+  return (size_t)agg_pt->GetCKKSPackedValue()[0].real();
+}
+
+void run_dkg(Delegate &del, vector<Party> &providers, PK &apk, shared_ptr<EvalKeys> &ask)
+{
+  Stopwatch sw;
+  print_title("Key Aggregation");
+  sw.start();
+
   // Compute keys
-  del.party.key_agg(apk, ask, aak);
+  del.party.dkg(apk, ask);
   for (size_t i = 0; i < providers.size(); i++)
-    providers[i].key_agg(apk, ask, aak);
+    providers[i].dkg(apk, ask);
 
   // Set keys
   del.party.pro_parms.apk = apk;
@@ -39,28 +60,30 @@ void run_key_aggregation(Delegate &del, vector<Party> &providers, PK &apk, share
   del.party.pro_parms.ask = ask;
 
   // Verify apk
-  vector<double> a = {1 << 10, 1 << 9, 1 << 8, 1 << 7};
-  PT pt1 = del.party.ckks_ctx->MakeCKKSPackedPlaintext(a), pt2;
-  cout << pt1 << endl;
-  vector<CT> ct = {del.party.ckks_ctx->Encrypt(apk, pt1)};
-  vector<CT> ct_parts(providers.size() + 1);
-  ct_parts[0] = del.party.joint_decrypt(ct)[0];
-  for (size_t i = 1; i <= providers.size(); i++)
-    ct_parts[i] = providers[i - 1].joint_decrypt(ct)[0];
-  del.party.ckks_ctx->MultipartyDecryptFusion(ct_parts, &pt2);
-  pt2->SetLength(4);
-  cout << pt2 << endl;
+  // vector<double> a = {1 << 10, 1 << 9, 1 << 8, 1 << 7};
+  // PT pt1 = del.party.ckks_ctx->MakeCKKSPackedPlaintext(a), pt2;
+  // cout << pt1 << endl;
+  // vector<CT> ct = {del.party.ckks_ctx->Encrypt(apk, pt1)};
+  // vector<CT> ct_parts(providers.size() + 1);
+  // ct_parts[0] = del.party.joint_decrypt(ct)[0];
+  // for (size_t i = 1; i <= providers.size(); i++)
+  //   ct_parts[i] = providers[i - 1].joint_decrypt(ct)[0];
+  // del.party.ckks_ctx->MultipartyDecryptFusion(ct_parts, &pt2);
+  // pt2->SetLength(4);
+  // cout << pt2 << endl;
 
   // Verify ask
-  del.party.ckks_ctx->InsertEvalSumKey(ask);
-  CT ct2 = del.party.ckks_ctx->EvalSum(ct[0], 4);
-  vector<CT> ct_sum = {ct2};
-  ct_parts[0] = del.party.joint_decrypt(ct_sum)[0];
-  for (size_t i = 1; i <= providers.size(); i++)
-    ct_parts[i] = providers[i - 1].joint_decrypt(ct_sum)[0];
-  del.party.ckks_ctx->MultipartyDecryptFusion(ct_parts, &pt2);
-  pt2->SetLength(1);
-  cout << pt2 << endl;
+  // del.party.ckks_ctx->InsertEvalSumKey(ask);
+  // CT ct2 = del.party.ckks_ctx->EvalSum(ct[0], 4);
+  // vector<CT> ct_sum = {ct2};
+  // ct_parts[0] = del.party.joint_decrypt(ct_sum)[0];
+  // for (size_t i = 1; i <= providers.size(); i++)
+  //   ct_parts[i] = providers[i - 1].joint_decrypt(ct_sum)[0];
+  // del.party.ckks_ctx->MultipartyDecryptFusion(ct_parts, &pt2);
+  // pt2->SetLength(1);
+  // cout << pt2 << endl;
+
+  printf("\nTime: %5.2fs\n", sw.elapsed());
 }
 
 int main(int argc, char *argv[])
@@ -211,37 +234,30 @@ int main(int argc, char *argv[])
   }
 
   /* Key Aggregation */
-  // AggKeys agg_keys;
   PK apk;
   shared_ptr<EvalKeys> ask = make_shared<EvalKeys>();
   EvalKey<DCRTPoly> aak;
   if (run_sum)
-    run_key_aggregation(del, providers, apk, ask, aak);
+    run_dkg(del, providers, apk, ask);
+
+  /* Delegate Finish */
+  Tuple<vector<CT>> M = del.start(data[0], ad);
 
   /* Main Protocol */
-  Tuple<vector<CT>> M = del.start(data[0], ad);
   Tuple<vector<CT>> R;
   R.e0 = vector<CT>(M.e0.size());
   R.e1 = vector<CT>(M.e1.size());
   for (int i = 0; i < n - 1; i++)
-  {
-    // if (run_sum)
-    // {
-    //   providers[i].pro_parms.apk = apk;
-    //   providers[i].pro_parms.ask = ask;
-    // }
     providers[i].compute_on_r(&M, &R, data[i + 1], iu, run_sum);
-  }
-  // del.finish(&R);
-  vector<CT> agg_res = del.finish(&R);
-  vector<CT> agg_res_parts(n);
-  agg_res_parts[0] = del.party.joint_decrypt(agg_res)[0];
-  for (int i = 1; i < n; i++)
-    agg_res_parts[i] = providers[i - 1].joint_decrypt(agg_res)[0];
-  PT agg_pt = del.joint_decrypt(agg_res_parts);
-  agg_pt->SetLength(1);
-  cout << agg_pt << endl;
 
-  // vector<complex<double>> int_sum_vec = agg_pt->GetCKKSPackedValue();
-  // cout << "Computed intersection-sum: " << int_sum_vec[0].real << endl;
+  vector<CT> agg_res(1);
+  /* Delegate Finish */
+  size_t int_size = del.finish(&R, agg_res);
+  cout << "Computed intersection size: " << int_size << endl;
+  if (run_sum)
+  {
+    /* Joint Decryption */
+    size_t int_sum = run_joint_decryption(del, providers, agg_res);
+    cout << "Computed intersection sum: " << setprecision(9) << int_sum << endl;
+  }
 }

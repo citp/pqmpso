@@ -86,12 +86,13 @@ shared_ptr<CCParams<CryptoContextBFVRNS>> gen_bfv_params()
 shared_ptr<CCParams<CryptoContextCKKSRNS>> gen_ckks_params()
 {
   shared_ptr<CCParams<CryptoContextCKKSRNS>> parms = make_shared<CCParams<CryptoContextCKKSRNS>>();
-  parms->SetMultiplicativeDepth(16);
+  parms->SetMultiplicativeDepth(3);
   parms->SetSecurityLevel(HEStd_192_classic);
   // parms->SetRingDim(65536);
-  parms->SetBatchSize(32768);
+  // parms->SetBatchSize(32768);
   parms->SetScalingModSize(59);
-  parms->SetMaxRelinSkDeg(16);
+  parms->SetMaxRelinSkDeg(3);
+  cout << "Ring Dimension: " << parms->GetRingDim() << endl;
   cout << "Scaling Mod Size: " << parms->GetScalingModSize() << endl;
   cout << "Security Level: " << parms->GetSecurityLevel() << endl;
   cout << "Batch Size: " << parms->GetBatchSize() << endl;

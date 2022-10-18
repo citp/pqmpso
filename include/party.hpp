@@ -42,7 +42,7 @@ inline void add_single_pt_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT *a,
 }
 
 // (a, b) \in (M, C)
-inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT *a, CT *b, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
+inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, const CryptoContext<DCRTPoly> &ckks_ctx, CT *a, CT *b, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
 {
   random_device rd;
   mt19937 generator(rd());
@@ -58,9 +58,9 @@ inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT 
 
   if (b != nullptr)
   {
-    int_vec = {0};
-    pt = bfv_ctx->MakePackedPlaintext(int_vec);
-    add_single_pt_inplace(bfv_ctx, b, &pt);
+    vector<double> dbl_vec = {0.0};
+    pt = ckks_ctx->MakeCKKSPackedPlaintext(dbl_vec);
+    add_single_pt_inplace(ckks_ctx, b, &pt);
   }
   else
   {
@@ -120,16 +120,14 @@ struct Party
     ckks_parms = ckks_p;
     bfv_ctx = gen_crypto_ctx(bfv_parms);
     ckks_ctx = gen_crypto_ctx(ckks_p);
-    // bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
-    // ckks_ctx->InsertEvalSumKey(pro_parms.ask);
 
-    // if (pro_parms.party_id == pro_parms.num_parties - 1)
-    //   bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
+    if (pro_parms.party_id == pro_parms.num_parties - 1)
+      bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
   }
 
   /* -------------------------------------- */
 
-  size_t decrypt_check_all(const SK &bfv_sk, const SK &ckks_sk, const Tuple<vector<CT>> *B, CT &result)
+  size_t decrypt_check_all(const SK &bfv_sk, const Tuple<vector<CT>> *B, CT &result)
   {
     BS::thread_pool pool(pro_parms.num_threads);
     vector<vector<bool>> ret(B->e0.size());
@@ -166,7 +164,7 @@ struct Party
         else
           ckks_ctx->EvalAddInPlace(result, ckks_ctx->EvalMult(pt, B->e1[i]));
       }
-      cout << "Computing Sum of Coefficients..." << endl;
+      // cout << "Computing Sum of Coefficients..." << endl;
       result = ckks_ctx->EvalSum(result, num_hashes_per_pt);
       // ckks_ctx->Decrypt(ckks_sk, result, &res_pt);
       // res_pt->SetLength(1);
@@ -225,8 +223,10 @@ struct Party
 
   void randomize_all_inplace(Tuple<vector<CT>> *B)
   {
-    // Stopwatch sw;
-    // sw.start();
+    Stopwatch sw;
+    print_title("Randomize B");
+    sw.start();
+
     thread_pool pool(pro_parms.num_threads);
     size_t plain_mod = bfv_ctx->GetCryptoParameters()->GetPlaintextModulus();
     size_t ring_dim = bfv_ctx->GetRingDimension();
@@ -236,13 +236,13 @@ struct Party
 
     if (pro_parms.with_ad)
     {
-      // for (size_t i = 0; i < B->e0.size(); i++)
-      //   pool.push_task(randomize_single_inplace, bfv_ctx, &(B->e0[i]), &(B->e1[i]), plain_mod, ring_dim, num_cf_per_hash);
+      for (size_t i = 0; i < B->e0.size(); i++)
+        pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), &(B->e1[i]), plain_mod, ring_dim, num_cf_per_hash);
     }
     else
     {
       for (size_t i = 0; i < B->e0.size(); i++)
-        pool.push_task(randomize_single_inplace, bfv_ctx, &(B->e0[i]), nullptr, plain_mod, ring_dim, num_cf_per_hash);
+        pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), nullptr, plain_mod, ring_dim, num_cf_per_hash);
 
       random_device rd;
       mt19937 generator(rd());
@@ -250,17 +250,18 @@ struct Party
     }
 
     pool.wait_for_tasks();
+    printf("\nTime: %5.2fs\n", sw.elapsed());
     // printf("randomized %lu plaintexts from ciphertexts (took %5.2fs).", A.size(), sw.elapsed());
   }
 
-  void prepare_hashmap(HashMap &hm, vector<PT> &hm_pt, vector<PT> &hm_1hot, vector<PT> &hm_0hot, const vector<string> &X)
-  {
-    vector<PT> v_pt;
-    hm.insert(X);
-    hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
-    hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
-    hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1));
-  }
+  // void prepare_hashmap(HashMap &hm, vector<PT> &hm_pt, vector<PT> &hm_1hot, vector<PT> &hm_0hot, const vector<string> &X)
+  // {
+  //   vector<PT> v_pt;
+  //   hm.insert(X);
+  //   hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
+  //   hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
+  //   hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1));
+  // }
 
   /* -------------------------------------- */
 
@@ -275,9 +276,8 @@ struct Party
   /*
     apk   Agg. Public Key
     ask   Agg. EvalSum Key
-    aak   Agg. EvalAuto key
   */
-  void key_agg(PK &apk, shared_ptr<EvalKeys> &ask, EvalKey<DCRTPoly> &aak)
+  void dkg(PK &apk, shared_ptr<EvalKeys> &ask)
   {
     KeyPair<DCRTPoly> kp;
     if (pro_parms.party_id == 0)
@@ -285,58 +285,35 @@ struct Party
       kp = ckks_ctx->KeyGen();
       ckks_ctx->EvalSumKeyGen(kp.secretKey, kp.publicKey);
       *ask = ckks_ctx->GetEvalSumKeyMap(kp.secretKey->GetKeyTag());
-      aak = ckks_ctx->KeySwitchGen(kp.secretKey, kp.secretKey);
+      // aak = ckks_ctx->KeySwitchGen(kp.secretKey, kp.secretKey);
     }
     else
     {
       kp = ckks_ctx->MultipartyKeyGen(apk);
       shared_ptr<EvalKeys> ask_i = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, ask, kp.publicKey->GetKeyTag());
       ask = ckks_ctx->MultiAddEvalSumKeys(ask, ask_i, kp.publicKey->GetKeyTag());
-      aak = ckks_ctx->MultiKeySwitchGen(kp.secretKey, kp.secretKey, aak);
+      // aak = ckks_ctx->MultiKeySwitchGen(kp.secretKey, kp.secretKey, aak);
     }
     sk_i = kp.secretKey;
     apk = kp.publicKey;
-    // return kp.publicKey;
   }
-
-  // PK key_aggregation(const PK prev_pk, shared_ptr<EvalKeys> &prev_sum_keys)
-  // {
-  //   KeyPair<DCRTPoly> kp;
-  //   if (prev_pk != NULL)
-  //   {
-  //     kp = ckks_ctx->MultipartyKeyGen(prev_pk);
-  //     // ckks_ctx->MultiAddPubKeys
-  //     auto new_sum_keys = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, prev_sum_keys, kp.publicKey->GetKeyTag());
-  //     prev_sum_keys = ckks_ctx->MultiAddEvalSumKeys(prev_sum_keys, new_sum_keys, kp.publicKey->GetKeyTag());
-  //     // prev_sum_keys = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, prev_sum_keys);
-  //     // prev_sum_keys = ckks_ctx->MultiAddEvalSumKeys(prev_sum_keys, )
-  //   }
-  //   else
-  //   {
-  //     kp = ckks_ctx->KeyGen();
-  //     ckks_ctx->EvalSumKeyGen(kp.secretKey);
-  //     *prev_sum_keys = ckks_ctx->GetEvalSumKeyMap(kp.secretKey->GetKeyTag());
-  //   }
-  //   sk_i = kp.secretKey;
-  //   return kp.publicKey;
-  // }
 
   void compute_on_r(const Tuple<vector<CT>> *M, Tuple<vector<CT>> *R, const vector<string> &X, bool iu, bool run_sum)
   {
     Stopwatch sw;
-
-    print_line();
     string protocol = string(iu ? "MPSIU" : "MPSI") + string(run_sum ? "-Sum" : "");
-    cout << protocol << ": Party " << pro_parms.party_id << endl;
-    print_line();
-
+    print_title(protocol + ": Party " + to_string(pro_parms.party_id));
     sw.start();
 
     HashMap hm(pro_parms);
     size_t m_sz = M->e0.size();
     vector<PT> hm_pt(m_sz), hm_1hot(m_sz), hm_0hot(m_sz);
 
-    prepare_hashmap(hm, hm_pt, hm_1hot, hm_0hot, X);
+    vector<PT> v_pt;
+    hm.insert(X);
+    hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
+    hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
+    hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1));
 
     // Compute R => R + (M - Enc(hm))
     cout << "Computing R => R + (M - Enc(hm))" << endl;
@@ -360,14 +337,12 @@ struct Party
         R->e0 = Rdiff;
       }
       else
-      {
         add_all_inplace(R->e0, Mdiff);
-      }
     }
 
     // The last party randomizes the ciphertexts
-    // if (pro_parms.party_id == pro_parms.num_parties - 1)
-    //   randomize_all_inplace(R);
+    if (pro_parms.party_id == pro_parms.num_parties - 1)
+      randomize_all_inplace(R);
 
     printf("\nTime: %5.2fs\n", sw.elapsed());
   }

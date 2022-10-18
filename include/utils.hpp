@@ -92,6 +92,12 @@ inline void print_line()
   cout << "-----------------------------------" << endl;
 }
 
+inline void print_title(string title)
+{
+  print_line();
+  cout << title << endl;
+  print_line();
+}
 /* -------------------------------------- */
 
 string random_string()
