@@ -18,13 +18,7 @@ struct Delegate
     bfv_sk = kp.secretKey;
     party.pro_parms.pk = kp.publicKey;
 
-    gen_rot_keys();
-
-    // kp = party.ckks_ctx->KeyGen();
-    // ckks_sk = kp.secretKey;
-    // ckks_pk = kp.publicKey;
-    // party.ckks_ctx->EvalSumKeyGen(ckks_sk, ckks_pk);
-    // party.ckks_ctx->EvalMultKeyGen(ckks_sk);
+    // gen_rot_keys();
   }
 
   /* -------------------------------------- */
@@ -35,9 +29,7 @@ struct Delegate
     sw.start();
 
     size_t ring_dim = party.bfv_ctx->GetRingDimension();
-    size_t plain_mod_bits = get_bitsize(party.bfv_ctx->GetEncodingParams()->GetPlaintextModulus()) - 1;
-    size_t num_hashes_per_pt = n_hashes_in_pt(party.pro_parms.pack_type, ring_dim, plain_mod_bits, party.pro_parms.hash_sz * 8);
-    size_t num_cf_per_hash = ring_dim / num_hashes_per_pt;
+    size_t num_cf_per_hash = ring_dim / party.pro_parms.batch_size;
 
     vector<usint> idx_list;
     for (size_t i = num_cf_per_hash; i < ring_dim; i += num_cf_per_hash)
@@ -68,13 +60,14 @@ struct Delegate
     else
       hm.insert(X);
     vector<PT> X_pt, V_pt;
-    hm.serialize(party.bfv_ctx, party.ckks_ctx, X_pt, V_pt, true);
+    hm.serialize(party.bfv_ctx, party.ckks_ctx, X_pt, V_pt, true, party.pro_parms.batch_size);
 
     Tuple<vector<CT>> ret;
     party.encrypt_all(party.bfv_ctx, party.pro_parms.pk, ret.e0, X_pt);
     if (party.pro_parms.with_ad)
       party.encrypt_all(party.ckks_ctx, party.pro_parms.apk, ret.e1, V_pt);
 
+    // cout << "Ciphertext size: " << ret.e0[0]->GetMetadataByKey()
     printf("\nTime: %5.2fs\n", sw.elapsed());
     return ret;
   }

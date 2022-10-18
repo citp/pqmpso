@@ -45,11 +45,11 @@ inline void add_single_pt_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT *a,
 inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, const CryptoContext<DCRTPoly> &ckks_ctx, CT *a, CT *b, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
 {
   random_device rd;
-  mt19937 generator(rd());
+  mt19937 gen(rd());
   vector<int64_t> int_vec(ring_dim);
 
   for (size_t i = 0; i < ring_dim; i++)
-    int_vec[i] = generator() % plain_mod;
+    int_vec[i] = gen() % plain_mod;
 
   PT pt = bfv_ctx->MakePackedPlaintext(int_vec);
   CT res;
@@ -62,15 +62,15 @@ inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, con
     pt = ckks_ctx->MakeCKKSPackedPlaintext(dbl_vec);
     add_single_pt_inplace(ckks_ctx, b, &pt);
   }
-  else
-  {
-    size_t num_hashes_per_pt = ring_dim / num_cf_per_hash;
-    usint mult = 1 + (generator() % (num_hashes_per_pt - 1));
-    bfv_ctx->EvalRotate(*a, mult * num_cf_per_hash);
-  }
+  // else
+  // {
+  //   size_t num_hashes_per_pt = ring_dim / num_cf_per_hash;
+  //   usint mult = 1 + (generator() % (num_hashes_per_pt - 1));
+  //   bfv_ctx->EvalRotate(*a, mult * num_cf_per_hash);
+  // }
 }
 
-inline void decrypt_check_one(const CryptoContext<DCRTPoly> &bfv_ctx, const SK &sk, const CT *ct, size_t nbits, PackingType pack_type, vector<bool> *ret)
+inline void decrypt_check_one(const CryptoContext<DCRTPoly> &bfv_ctx, const SK &sk, const CT *ct, size_t nbits, PackingType pack_type, vector<bool> *ret, size_t batch_size)
 {
   PT pt;
   bfv_ctx->Decrypt(sk, *ct, &pt);
@@ -85,17 +85,13 @@ inline void decrypt_check_one(const CryptoContext<DCRTPoly> &bfv_ctx, const SK &
   }
 
   vector<vector<uint8_t>> unpacked;
-  size_t plain_mod_bits = get_bitsize(bfv_ctx->GetEncodingParams()->GetPlaintextModulus()) - 1;
-  size_t num_hashes_per_pt = n_hashes_in_pt(pack_type, bfv_ctx->GetRingDimension(), plain_mod_bits, nbits);
-  // cout << "num_hashes_per_pt = " << num_hashes_per_pt << endl;
-
   if (pack_type == MULTIPLE)
-    unpack_bitwise_multiple(pt, &unpacked, num_hashes_per_pt, nbits);
+    unpack_bitwise_multiple(pt, &unpacked, batch_size, nbits);
   else if (pack_type == MULTIPLE_COMPACT)
     unpack_multiple_compact(pt, &unpacked, bits_to_bytes(nbits));
 
-  ret->resize(num_hashes_per_pt);
-  for (size_t i = 0; i < num_hashes_per_pt; i++)
+  ret->resize(batch_size);
+  for (size_t i = 0; i < batch_size; i++)
     (*ret)[i] = is_zero(&unpacked[i]);
 }
 
@@ -109,7 +105,6 @@ struct Party
   CryptoContext<DCRTPoly> ckks_ctx;
   ProtocolParameters pro_parms;
   SK sk_i;
-  // PK apk;
 
   Party() {}
 
@@ -121,8 +116,8 @@ struct Party
     bfv_ctx = gen_crypto_ctx(bfv_parms);
     ckks_ctx = gen_crypto_ctx(ckks_p);
 
-    if (pro_parms.party_id == pro_parms.num_parties - 1)
-      bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
+    // if (pro_parms.party_id == pro_parms.num_parties - 1)
+    //   bfv_ctx->InsertEvalAutomorphismKey(pro_parms.ek);
   }
 
   /* -------------------------------------- */
@@ -134,7 +129,7 @@ struct Party
     size_t nbits = pro_parms.hash_sz * 8;
     size_t count = 0;
     for (size_t i = 0; i < B->e0.size(); i++)
-      pool.push_task(decrypt_check_one, bfv_ctx, bfv_sk, &(B->e0[i]), nbits, pro_parms.pack_type, &ret[i]);
+      pool.push_task(decrypt_check_one, bfv_ctx, bfv_sk, &(B->e0[i]), nbits, pro_parms.pack_type, &ret[i], pro_parms.batch_size);
     pool.wait_for_tasks();
     vector<bool> one_hot_matches(ret.size() * ret[0].size());
     for (size_t i = 0; i < ret.size(); i++)
@@ -147,16 +142,14 @@ struct Party
     }
     if (pro_parms.with_ad)
     {
-      size_t ring_dim = ckks_ctx->GetRingDimension();
-      size_t num_hashes_per_pt = ring_dim / 2;
-      one_hot_matches.resize(num_hashes_per_pt * B->e1.size());
+      one_hot_matches.resize(pro_parms.batch_size * B->e1.size());
       CT res;
       PT res_pt;
       for (size_t i = 0; i < B->e1.size(); i++)
       {
-        size_t start = i * num_hashes_per_pt;
-        vector<double> vec(num_hashes_per_pt, 0);
-        for (size_t j = 0; j < num_hashes_per_pt; j++)
+        size_t start = i * pro_parms.batch_size;
+        vector<double> vec(pro_parms.batch_size, 0);
+        for (size_t j = 0; j < pro_parms.batch_size; j++)
           vec[j] = ((double)one_hot_matches[j + start]);
         PT pt = ckks_ctx->MakeCKKSPackedPlaintext(vec);
         if (i == 0)
@@ -164,11 +157,7 @@ struct Party
         else
           ckks_ctx->EvalAddInPlace(result, ckks_ctx->EvalMult(pt, B->e1[i]));
       }
-      // cout << "Computing Sum of Coefficients..." << endl;
-      result = ckks_ctx->EvalSum(result, num_hashes_per_pt);
-      // ckks_ctx->Decrypt(ckks_sk, result, &res_pt);
-      // res_pt->SetLength(1);
-      // cout << res_pt << endl;
+      result = ckks_ctx->EvalSum(result, pro_parms.batch_size);
     }
     return count;
   }
@@ -187,81 +176,78 @@ struct Party
 
   void add_all_inplace(vector<CT> &A, const vector<CT> &B)
   {
-    // Stopwatch sw;
-    // sw.start();
     assert(A.size() == B.size());
     thread_pool pool(pro_parms.num_threads);
     for (size_t i = 0; i < A.size(); i++)
       pool.push_task(add_single_ct_inplace, bfv_ctx, &A[i], &B[i]);
     pool.wait_for_tasks();
-    // printf("added %lu ciphertexts (took %5.2fs).", A.size(), sw.elapsed());
   }
 
   void multiply_all(const vector<CT> &A, const vector<PT> &B, vector<CT> &dest)
   {
-    // Stopwatch sw;
-    // sw.start();
     assert(A.size() == B.size());
     thread_pool pool(pro_parms.num_threads);
     for (size_t i = 0; i < A.size(); i++)
       pool.push_task(multiply_single, bfv_ctx, &A[i], &B[i], &dest[i]);
     pool.wait_for_tasks();
-    // printf("multiplied %lu plaintexts from ciphertexts (took %5.2fs).", B.size(), sw.elapsed());
   }
 
   void subtract_all(const vector<CT> &A, const vector<PT> &B, vector<CT> &dest)
   {
-    // Stopwatch sw;
-    // sw.start();
     assert(A.size() == B.size());
     thread_pool pool(pro_parms.num_threads);
     for (size_t i = 0; i < A.size(); i++)
       pool.push_task(subtract_single, bfv_ctx, &A[i], &B[i], &dest[i]);
     pool.wait_for_tasks();
-    // printf("subtracted %lu plaintexts from ciphertexts (took %5.2fs).", B.size(), sw.elapsed());
   }
 
   void randomize_all_inplace(Tuple<vector<CT>> *B)
   {
     Stopwatch sw;
-    print_title("Randomize B");
     sw.start();
 
     thread_pool pool(pro_parms.num_threads);
     size_t plain_mod = bfv_ctx->GetCryptoParameters()->GetPlaintextModulus();
     size_t ring_dim = bfv_ctx->GetRingDimension();
-    size_t plain_mod_bits = get_bitsize(bfv_ctx->GetEncodingParams()->GetPlaintextModulus()) - 1;
-    size_t num_hashes_per_pt = n_hashes_in_pt(pro_parms.pack_type, ring_dim, plain_mod_bits, pro_parms.hash_sz * 8);
-    size_t num_cf_per_hash = ring_dim / num_hashes_per_pt;
+    size_t num_cf_per_hash = ring_dim / pro_parms.batch_size;
+    size_t b_size = B->e0.size();
 
     if (pro_parms.with_ad)
     {
-      for (size_t i = 0; i < B->e0.size(); i++)
+      for (size_t i = 0; i < b_size; i++)
         pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), &(B->e1[i]), plain_mod, ring_dim, num_cf_per_hash);
     }
     else
     {
-      for (size_t i = 0; i < B->e0.size(); i++)
+      for (size_t i = 0; i < b_size; i++)
         pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), nullptr, plain_mod, ring_dim, num_cf_per_hash);
+    }
 
-      random_device rd;
-      mt19937 generator(rd());
-      shuffle(B->e0.begin(), B->e0.end(), generator);
+    vector<size_t> idx_vec(b_size);
+    for (size_t i = 0; i < b_size; i++)
+      idx_vec[i] = i;
+
+    random_device rd;
+    mt19937 gen(rd());
+    shuffle(idx_vec.begin(), idx_vec.end(), gen);
+
+    if (pro_parms.with_ad)
+    {
+      for (size_t i = 0; i < b_size; i++)
+      {
+        swap(B->e0[i], B->e0[idx_vec[i]]);
+        swap(B->e1[i], B->e1[idx_vec[i]]);
+      }
+    }
+    else
+    {
+      for (size_t i = 0; i < b_size; i++)
+        swap(B->e0[i], B->e0[idx_vec[i]]);
     }
 
     pool.wait_for_tasks();
-    printf("\nTime: %5.2fs\n", sw.elapsed());
-    // printf("randomized %lu plaintexts from ciphertexts (took %5.2fs).", A.size(), sw.elapsed());
+    printf("\nRandomization: %5.2fs\n", sw.elapsed());
   }
-
-  // void prepare_hashmap(HashMap &hm, vector<PT> &hm_pt, vector<PT> &hm_1hot, vector<PT> &hm_0hot, const vector<string> &X)
-  // {
-  //   vector<PT> v_pt;
-  //   hm.insert(X);
-  //   hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
-  //   hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
-  //   hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1));
-  // }
 
   /* -------------------------------------- */
 
@@ -313,7 +299,7 @@ struct Party
     hm.insert(X);
     hm.hot_encoding_mask(bfv_ctx, hm_1hot, false);
     hm.hot_encoding_mask(bfv_ctx, hm_0hot, true);
-    hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1));
+    hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1), pro_parms.batch_size);
 
     // Compute R => R + (M - Enc(hm))
     cout << "Computing R => R + (M - Enc(hm))" << endl;

@@ -216,10 +216,10 @@ int main(int argc, char *argv[])
     exit(0);
 
   /* Parameter Generation */
-  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, run_sum, pack_type, nullptr, nullptr};
-
-  shared_ptr<CCParams<CryptoContextBFVRNS>> bfv_parms = gen_bfv_params();
-  shared_ptr<CCParams<CryptoContextCKKSRNS>> ckks_parms = gen_ckks_params();
+  size_t ring_dim = 32768;
+  shared_ptr<CCParams<CryptoContextBFVRNS>> bfv_parms = gen_bfv_params(ring_dim);
+  shared_ptr<CCParams<CryptoContextCKKSRNS>> ckks_parms = gen_ckks_params(ring_dim);
+  ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, n_hashes_in_pt(pack_type, ring_dim, 16, 384), run_sum, pack_type, nullptr, nullptr};
 
   /* Setup */
   Delegate del(pro_parms, bfv_parms, ckks_parms);

@@ -54,9 +54,6 @@ struct HashMap
       size_t idx = get_map_index(X[i]);
       data[idx] = sha384(X[i] + "||**VALUE**||");
       ad_data[idx] = (uint32_t)ad[i];
-      // ad_data[idx] = vector<uint8_t>(sizeof(int64_t));
-      // memcpy(ad_data[idx].data(), &ad[i], sizeof(int64_t));
-      // pack_base_int_arr(int_vec, ad[idx], 2);
     }
   }
 
@@ -102,24 +99,12 @@ struct HashMap
     }
     if (ad_data.size() == n)
     {
-
-      // buf = vector<uint8_t>(n_empty * sizeof(int64_t));
-      // random_bytes(buf.data(), n_empty * sizeof(int64_t));
-      // idx = 0;
       for (size_t i = 0; i < n; i++)
       {
         if (ad_data[i] == 0)
-          ad_data[i] = random_int(1000);
-        //   if (ad_data[i].size() == 0)
-        //   {
-        //     ad_data[i] = vector<uint8_t>(sizeof(int64_t));
-        //     memcpy(ad_data[i].data(), buf.data() + (idx * sizeof(int64_t)), sizeof(int64_t));
-        //   }
+          ad_data[i] = random_int(65537);
       }
     }
-    // cout << "# Empty slots: " << n_empty << endl;
-    // cout << "Generated " << n_empty * sz << " random bytes" << endl;
-    // cout << "filled empty slots with randomness... ";
   }
 
   void fill_empty_zeros()
@@ -129,15 +114,6 @@ struct HashMap
       if (data[i].size() == 0)
         data[i] = vector<uint8_t>(sz, 0);
     }
-    // if (ad_data.size() == n)
-    // {
-    //   for (size_t i = 0; i < n; i++)
-    //   {
-    //     if (ad_data[i].size() == 0)
-    //       ad_data[i] = vector<uint8_t>(sizeof(int64_t), 0);
-    //   }
-    // }
-    // cout << "filled empty slots with zeros... ";
   }
 
   void fill_int_arr(vector<int64_t> *int_vec, size_t val, size_t start_idx, size_t num_vals)
@@ -174,10 +150,10 @@ struct HashMap
     }
   }
 
-  void serialize_data(CryptoContext<DCRTPoly> &ctx, vector<PT> &pt, bool ad)
+  void serialize_data(CryptoContext<DCRTPoly> &ctx, vector<PT> &pt, bool ad, size_t batch_size)
   {
     size_t ring_dim = ctx->GetRingDimension();
-    size_t num_hashes_per_pt = ring_dim / 2;
+    size_t num_hashes_per_pt = batch_size;
     if (ad)
     {
       size_t num_pt = (n / num_hashes_per_pt) + ((n % num_hashes_per_pt == 0) ? 0 : 1);
@@ -197,11 +173,8 @@ struct HashMap
       }
       return;
     }
-    // buf = &ad_data;
     vector<vector<uint8_t>> *buf = &data;
-    size_t plain_mod_bits = get_bitsize(ctx->GetEncodingParams()->GetPlaintextModulus()) - 1;
     size_t nbits = (*buf)[0].size() * 8;
-    num_hashes_per_pt = n_hashes_in_pt(pack_type, ring_dim, plain_mod_bits, nbits);
     size_t num_cf_per_hash = ring_dim / num_hashes_per_pt;
     size_t num_pt = (n / num_hashes_per_pt) + ((n % num_hashes_per_pt == 0) ? 0 : 1);
     pt.resize(num_pt);
@@ -235,7 +208,7 @@ struct HashMap
     }
   }
 
-  void serialize(CryptoContext<DCRTPoly> &bfv_ctx, CryptoContext<DCRTPoly> &ckks_ctx, vector<PT> &pt, vector<PT> &ad_pt, bool fill_random)
+  void serialize(CryptoContext<DCRTPoly> &bfv_ctx, CryptoContext<DCRTPoly> &ckks_ctx, vector<PT> &pt, vector<PT> &ad_pt, bool fill_random, size_t batch_size)
   {
     cout << "# Empty slots = " << n_empty_slots() << endl;
     if (fill_random)
@@ -243,8 +216,8 @@ struct HashMap
     else
       fill_empty_zeros();
 
-    serialize_data(bfv_ctx, pt, false);
+    serialize_data(bfv_ctx, pt, false, batch_size);
     if (ad_data.size() > 0)
-      serialize_data(ckks_ctx, ad_pt, true);
+      serialize_data(ckks_ctx, ad_pt, true, batch_size);
   }
 };

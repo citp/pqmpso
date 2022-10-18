@@ -4,7 +4,7 @@ project(pqmpso)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/target)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE DEBUG)
-set(CMAKE_CXX_FLAGS "-O3 -ggdb -Wall -fpermissive")
+set(CMAKE_CXX_FLAGS "-O3 -ggdb -Wall -Werror -fpermissive -pg")
 
 option( BUILD_STATIC "Set to ON to include static versions of the library" OFF)
 
