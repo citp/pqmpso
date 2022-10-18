@@ -3,8 +3,11 @@ cmake_minimum_required(VERSION 3.16)
 project(pqmpso)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/target)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_BUILD_TYPE DEBUG)
-set(CMAKE_CXX_FLAGS "-O3 -ggdb -Wall -Werror -fpermissive -pg")
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "-pg -O3 -Wall -Werror -fpermissive")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 
 option( BUILD_STATIC "Set to ON to include static versions of the library" OFF)
 

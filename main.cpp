@@ -260,4 +260,5 @@ int main(int argc, char *argv[])
     size_t int_sum = run_joint_decryption(del, providers, agg_res);
     cout << "Computed intersection sum: " << setprecision(9) << int_sum << endl;
   }
+  return 0;
 }
