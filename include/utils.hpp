@@ -100,24 +100,36 @@ inline void print_title(string title)
 }
 /* -------------------------------------- */
 
-void random_bytes(uint8_t *buf, size_t sz)
+inline void random_bytes(uint8_t *buf, size_t sz)
 {
-  RAND_bytes(buf, sz);
+  // if (sz > INT32_MAX)
+  // {
+  int64_t remain = sz;
+  while (remain > 0)
+  {
+    int err = RAND_bytes(buf, (remain > INT32_MAX) ? INT32_MAX : remain);
+    assert(err == 1);
+    remain -= INT32_MAX;
+  }
+  return;
+  // }
+  // int err = RAND_bytes(buf, sz);
+  // assert(err == 1);
 }
 
 vector<string> random_strings(size_t num)
 {
   size_t str_bytes = 6;
   size_t t_bytes = str_bytes * num;
-  uint8_t buf[t_bytes];
-  random_bytes(buf, t_bytes);
+  vector<uint8_t> buf(t_bytes);
+  random_bytes(buf.data(), t_bytes);
   vector<string> ret(num);
   for (size_t i = 0; i < num; i++)
   {
     char arr[str_bytes * 2 + 1];
     size_t offset = (i * str_bytes);
     for (size_t j = 0; j < str_bytes; j++)
-      sprintf(arr + (2 * j), "%2x", buf[offset + j]);
+      sprintf(arr + (2 * j), "%02X", buf[offset + j]);
     ret[i] = string(arr);
   }
   return ret;
@@ -129,6 +141,11 @@ int64_t random_int(size_t mod)
   random_bytes((uint8_t *)&r, sizeof(r));
   return r % mod;
 }
+
+// vector<int64_t> random_ints(size_t num)
+// {
+//   vector<int64_t> r;
+// }
 
 /* -------------------------------------- */
 

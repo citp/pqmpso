@@ -205,6 +205,7 @@ int main(int argc, char *argv[])
   else
     gen_random_data(data, ad, n, x0, xi, int_sz, iu, run_sum);
 
+  cout << int_sz << " " << get_intersection_size(data, iu) << endl;
   assert((size_t)int_sz == get_intersection_size(data, iu));
 
   if (!read)

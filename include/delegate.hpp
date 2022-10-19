@@ -60,7 +60,7 @@ struct Delegate
     else
       hm.insert(X);
     vector<PT> X_pt, V_pt;
-    hm.serialize(party.bfv_ctx, party.ckks_ctx, X_pt, V_pt, true, party.pro_parms.batch_size);
+    hm.serialize(party.bfv_ctx, party.ckks_ctx, X_pt, V_pt, true, party.pro_parms.batch_size, party.pro_parms.num_threads);
 
     Tuple<vector<CT>> ret;
     party.encrypt_all(party.bfv_ctx, party.pro_parms.pk, ret.e0, X_pt);

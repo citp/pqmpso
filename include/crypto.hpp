@@ -219,9 +219,8 @@ inline void pack_compact_int_arr(vector<int64_t> *int_vec, vector<uint8_t> *to_p
 }
 
 // start_idx in to_pack
-void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, size_t num_cf_per_hash, bool fill_random)
+inline void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, size_t num_cf_per_hash, size_t ring_dim, bool fill_random)
 {
-  size_t ring_dim = bfv_ctx->GetRingDimension();
   vector<int64_t> int_vec(ring_dim);
   for (size_t i = 0; i < count; i++)
     pack_compact_int_arr(&int_vec, &to_pack->at(start_idx + i), num_cf_per_hash * i);
@@ -230,7 +229,7 @@ void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vect
   *pt = bfv_ctx->MakePackedPlaintext(int_vec);
 }
 
-void unpack_multiple_compact(PT &pt, vector<vector<uint8_t>> *unpacked, size_t num_bytes_per_hash)
+inline void unpack_multiple_compact(PT &pt, vector<vector<uint8_t>> *unpacked, size_t num_bytes_per_hash)
 {
   vector<int64_t> int_vec = pt->GetPackedValue();
   size_t num_cf_per_hash = (num_bytes_per_hash / 2);

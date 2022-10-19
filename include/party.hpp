@@ -295,9 +295,9 @@ struct Party
 
     vector<PT> v_pt;
     hm.insert(X);
-    hm.hot_encoding_mask(bfv_ctx, hm_1hot, false, pro_parms.batch_size);
-    hm.hot_encoding_mask(bfv_ctx, hm_0hot, true, pro_parms.batch_size);
-    hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1), pro_parms.batch_size);
+    hm.hot_encoding_mask(bfv_ctx, hm_1hot, hm_0hot, pro_parms.batch_size);
+    // hm.hot_encoding_mask(bfv_ctx, hm_0hot, true, pro_parms.batch_size);
+    hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1), pro_parms.batch_size, pro_parms.num_threads);
 
     // Compute R => R + (M - Enc(hm))
     cout << "Computing R => R + (M - Enc(hm))" << endl;
