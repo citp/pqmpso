@@ -44,12 +44,10 @@ inline void add_single_pt_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT *a,
 // (a, b) \in (M, C)
 inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, const CryptoContext<DCRTPoly> &ckks_ctx, CT *a, CT *b, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
 {
-  random_device rd;
-  mt19937 gen(rd());
   vector<int64_t> int_vec(ring_dim);
 
   for (size_t i = 0; i < ring_dim; i++)
-    int_vec[i] = gen() % plain_mod;
+    int_vec[i] = random_int(plain_mod);
 
   PT pt = bfv_ctx->MakePackedPlaintext(int_vec);
   CT res;

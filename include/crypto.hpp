@@ -54,11 +54,6 @@ struct AggKeys
 
 /* -------------------------------------- */
 
-void random_bytes(uint8_t *buf, size_t sz)
-{
-  RAND_bytes(buf, sz);
-}
-
 shared_ptr<CCParams<CryptoContextBFVRNS>> gen_bfv_params(size_t ring_dim)
 {
   shared_ptr<CCParams<CryptoContextBFVRNS>> parms = make_shared<CCParams<CryptoContextBFVRNS>>();
@@ -222,7 +217,6 @@ inline void pack_compact_int_arr(vector<int64_t> *int_vec, vector<uint8_t> *to_p
   for (size_t i = 0; i < to_pack->size() / 2; i++)
     memcpy(&(int_vec->data()[start_idx + i]), &(to_pack->data()[2 * i]), 2);
 }
-
 
 // start_idx in to_pack
 void pack_multiple_compact(CryptoContext<DCRTPoly> &bfv_ctx, PT *pt, vector<vector<uint8_t>> *to_pack, size_t start_idx, size_t count, size_t num_cf_per_hash, bool fill_random)

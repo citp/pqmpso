@@ -100,26 +100,34 @@ inline void print_title(string title)
 }
 /* -------------------------------------- */
 
-string random_string()
+void random_bytes(uint8_t *buf, size_t sz)
 {
-  random_device rd;
-  mt19937 generator(rd());
-  return to_string(generator() % UINT64_MAX);
+  RAND_bytes(buf, sz);
 }
 
 vector<string> random_strings(size_t num)
 {
-  set<string> ret;
-  while (ret.size() < num)
-    ret.insert(random_string());
-  return vector<string>(ret.begin(), ret.end());
+  size_t str_bytes = 6;
+  size_t t_bytes = str_bytes * num;
+  uint8_t buf[t_bytes];
+  random_bytes(buf, t_bytes);
+  vector<string> ret(num);
+  for (size_t i = 0; i < num; i++)
+  {
+    char arr[str_bytes * 2 + 1];
+    size_t offset = (i * str_bytes);
+    for (size_t j = 0; j < str_bytes; j++)
+      sprintf(arr + (2 * j), "%2x", buf[offset + j]);
+    ret[i] = string(arr);
+  }
+  return ret;
 }
 
 int64_t random_int(size_t mod)
 {
-  random_device rd;
-  mt19937 generator(rd());
-  return generator() % mod;
+  int64_t r;
+  random_bytes((uint8_t *)&r, sizeof(r));
+  return r % mod;
 }
 
 /* -------------------------------------- */
@@ -228,8 +236,6 @@ size_t get_intersection_size(vector<vector<string>> &data, bool iu)
 void gen_random_data(vector<vector<string>> &ret, vector<int64_t> &ad, size_t n_parties, size_t x0, size_t xi, size_t int_sz, bool iu, bool run_sum)
 {
   cout << "Generating random data...";
-  random_device rd;
-  mt19937 generator(rd());
   vector<string> int_strs = random_strings(int_sz);
   if (iu)
   {
@@ -242,7 +248,7 @@ void gen_random_data(vector<vector<string>> &ret, vector<int64_t> &ad, size_t n_
       // Generate random non-empty subset of non-delegates
       size_t rand_sub = 0;
       while (rand_sub == 0)
-        rand_sub = generator() % static_cast<size_t>(pow(2, n_parties - 1));
+        rand_sub = random_int(static_cast<size_t>(pow(2, n_parties - 1)));
 
       for (size_t j = 1; j < n_parties; j++)
       {
@@ -284,7 +290,7 @@ void gen_random_data(vector<vector<string>> &ret, vector<int64_t> &ad, size_t n_
   {
     ad.resize(ret[0].size());
     for (size_t i = 0; i < ad.size(); i++)
-      ad[i] = generator() % 65537;
+      ad[i] = random_int(65537);
   }
 
   cout << " generated." << endl;
