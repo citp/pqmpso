@@ -122,26 +122,23 @@ struct HashMap
       (*int_vec)[i] = val;
   }
 
-  void hot_encoding_mask(CryptoContext<DCRTPoly> &bfv_ctx, vector<PT> &pt, bool zero_hot)
+  void hot_encoding_mask(CryptoContext<DCRTPoly> &bfv_ctx, vector<PT> &pt, bool zero_hot, size_t batch_size)
   {
     set<size_t> filled = filled_slots();
-    size_t plain_mod_bits = get_bitsize(bfv_ctx->GetEncodingParams()->GetPlaintextModulus()) - 1;
-    size_t nbits = sz * 8;
     size_t ring_dim = bfv_ctx->GetRingDimension();
-    size_t num_hashes_per_pt = n_hashes_in_pt(pack_type, ring_dim, plain_mod_bits, nbits);
-    size_t num_pt = (n / num_hashes_per_pt) + ((n % num_hashes_per_pt == 0) ? 0 : 1);
+    size_t num_pt = (n / batch_size) + ((n % batch_size == 0) ? 0 : 1);
     pt.resize(num_pt);
     size_t mark = zero_hot ? 0 : 1;
 
-    size_t n_cf_per_hash = nbits;
+    size_t n_cf_per_hash = sz * 8;
     if (pack_type == MULTIPLE_COMPACT)
-      n_cf_per_hash = ring_dim / num_hashes_per_pt;
+      n_cf_per_hash = ring_dim / batch_size;
     for (size_t i = 0; i < num_pt; i++)
     {
-      vector<int64_t> int_vec(n_cf_per_hash * num_hashes_per_pt);
-      for (size_t j = 0; j < num_hashes_per_pt; j++)
+      vector<int64_t> int_vec(n_cf_per_hash * batch_size);
+      for (size_t j = 0; j < batch_size; j++)
       {
-        if (filled.find(i * num_hashes_per_pt + j) != filled.end())
+        if (filled.find(i * batch_size + j) != filled.end())
           fill_int_arr(&int_vec, mark, n_cf_per_hash * j, n_cf_per_hash);
         else
           fill_int_arr(&int_vec, 1 - mark, n_cf_per_hash * j, n_cf_per_hash);
