@@ -117,6 +117,38 @@ int main()
 {
   CCParams<CryptoContextCKKSRNS> enc_params;
   enc_params.SetMultiplicativeDepth(1);
+  enc_params.SetSecurityLevel(HEStd_192_classic);
+  CryptoContext<DCRTPoly> ctx = GenCryptoContext(enc_params);
+  ctx->Enable(PKE);
+  ctx->Enable(KEYSWITCH);
+  ctx->Enable(LEVELEDSHE);
+  ctx->Enable(ADVANCEDSHE);
+  // batch_size =
+
+  "Permute"_test = [ctx]
+  {
+    KeyPair<DCRTPoly> kp = ctx->KeyGen();
+    vector<double> a = {1 << 20, 1 << 21}, b = {1 << 18, 1 << 19};
+    PT pt = ctx->MakeCKKSPackedPlaintext(a);
+    CT ct = ctx->Encrypt(kp.publicKey, pt);
+    size_t ring_dim = ctx->GetRingDimension();
+    size_t num_cf_per_hash = 1365;
+
+    vector<usint> idx_list;
+    for (size_t i = num_cf_per_hash; i < ring_dim; i += num_cf_per_hash)
+      idx_list.push_back((usint)i);
+
+    auto ek = ctx->EvalAutomorphismKeyGen(kp.secretKey, ctx->FindAutomorphismIndices(idx_list));
+    ctx->EvalFastRotationPrecompute(ct);
+  };
+
+  return 0;
+}
+
+int older_main()
+{
+  CCParams<CryptoContextCKKSRNS> enc_params;
+  enc_params.SetMultiplicativeDepth(1);
 
   // enc_params.SetKeySwitchCount(0);
   // enc_params.SetDigitSize()
@@ -156,6 +188,8 @@ int main()
     ctx->Decrypt(kp.secretKey, ct_sum, &pt_res);
     print_vec(pt_res->GetCKKSPackedValue(), 1);
   };
+
+  return 0;
 }
 
 int old_main()

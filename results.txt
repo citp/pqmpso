@@ -1,0 +1,815 @@
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           1048576
+|X_i|           1048576
+|I|             65536
+|M|             16777216
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+65536 65536
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.92s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 15760973
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+
+Time: 173.06s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 15760526
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 57.35s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Empty slots = 15760609
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 78.56s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Empty slots = 15760748
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 144.99s
+
+Time: 219.67s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 291.02s
+Computed intersection size: 59537
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.28s
+Computed intersection sum: 1951996014
+
+________________________________________________________
+Executed in  838.68 secs    fish           external
+   usr time  471.18 mins  191.00 micros  471.18 mins
+   sys time  133.39 mins  301.00 micros  133.39 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           1048576
+|X_i|           1048576
+|I|             65536
+|M|             16777216
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+65536 65536
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.92s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 15760758
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+
+Time: 191.84s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 15760926
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 56.95s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Empty slots = 15760687
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 79.12s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Empty slots = 15760634
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 143.37s
+
+Time: 218.26s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 272.77s
+Computed intersection size: 59566
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.29s
+Computed intersection sum: 1954624855
+
+________________________________________________________
+Executed in  838.20 secs    fish           external
+   usr time  550.28 mins  194.00 micros  550.28 mins
+   sys time  130.80 mins  306.00 micros  130.80 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           1048576
+|X_i|           1048576
+|I|             65536
+|M|             16777216
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+65536 65536
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.92s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 15760758
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+
+Time: 191.84s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 15760926
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 56.95s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Empty slots = 15760687
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 79.12s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Empty slots = 15760634
+# Plaintexts = 12292
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 143.37s
+
+Time: 218.26s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 272.77s
+Computed intersection size: 59566
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.29s
+Computed intersection sum: 1954624855
+
+________________________________________________________
+Executed in  838.20 secs    fish           external
+   usr time  550.28 mins  194.00 micros  550.28 mins
+   sys time  130.80 mins  306.00 micros  130.80 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           1048576
+|X_i|           1048576
+|I|             65536
+|M|             33554432
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+65536 65536
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.91s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 32521984
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+
+Time: 365.37s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 32522271
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 115.68s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Empty slots = 32521878
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 156.48s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Empty slots = 32522225
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 282.08s
+
+Time: 437.75s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 629.96s
+Computed intersection size: 62500
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.29s
+Computed intersection sum: 2051092658
+
+________________________________________________________
+Executed in   28.89 mins    fish           external
+   usr time  1014.29 mins  187.00 micros  1014.29 mins
+   sys time  259.62 mins  294.00 micros  259.62 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           1048576
+|X_i|           1048576
+|I|             65536
+|M|             33554432
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+65536 65536
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.91s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 32521984
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+
+Time: 365.37s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 32522271
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 115.68s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Empty slots = 32521878
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 156.48s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Empty slots = 32522225
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 282.08s
+
+Time: 437.75s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 629.96s
+Computed intersection size: 62500
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.29s
+Computed intersection sum: 2051092658
+
+________________________________________________________
+Executed in   28.89 mins    fish           external
+   usr time  1014.29 mins  187.00 micros  1014.29 mins
+   sys time  259.62 mins  294.00 micros  259.62 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           2097152
+|X_i|           2097152
+|I|             131072
+|M|             33554432
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+131072 131072
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.92s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 31521261
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+
+Time: 352.01s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 31521628
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 120.25s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Empty slots = 31521441
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 156.37s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Empty slots = 31521403
+# Plaintexts = 24583
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 296.05s
+
+Time: 441.76s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 597.82s
+Computed intersection size: 119278
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.21s
+Computed intersection sum: 3902126204
+
+________________________________________________________
+Executed in   28.38 mins    fish           external
+   usr time  959.85 mins  193.00 micros  959.85 mins
+   sys time  260.02 mins  300.00 micros  260.02 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           2097152
+|X_i|           2097152
+|I|             131072
+|M|             67108864
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+131072 131072
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.80s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 65044390
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+
+Time: 812.91s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 65044215
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 232.30s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 305.61s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 547.66s
+
+Time: 805.58s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 1093.07s
+Computed intersection size: 18673607
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.29s
+Computed intersection sum: 611952581131
+
+________________________________________________________
+Executed in   55.00 mins    fish           external
+   usr time  2360.89 mins    0.00 micros  2360.89 mins
+   sys time  474.02 mins  468.00 micros  474.02 mins
+
+===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           2097152
+|X_i|           2097152
+|I|             131072
+|M|             67108864
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+131072 131072
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.97s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 65043828
+2 iters for 3122103744 bytes
+0 2147483647
+1 974620097
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+
+Time: 784.37s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 65044096
+2 iters for 3122116608 bytes
+0 2147483647
+1 974632961
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 239.21s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 318.15s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 559.58s
+
+Time: 832.63s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 1082.11s
+Computed intersection size: 124961
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.16s
+Computed intersection sum: 4096637572
+
+________________________________________________________
+Executed in   55.16 mins    fish           external
+   usr time  2220.70 mins    0.00 micros  2220.70 mins
+   sys time  494.13 mins  438.00 micros  494.13 mins
+
+   ===================================
+Protocol        MPSIU-Sum
+#Parties        4
+|X_0|           4194304
+|X_i|           4194304
+|I|             131072
+|M|             67108864
+Threads         40
+Location        ./data
+Verbose?        True
+===================================
+Generating random data... generated.
+131072 131072
+Writing data...
+        Wrote to ./data/0.dat.
+        Wrote to ./data/1.dat.
+        Wrote to ./data/2.dat.
+        Wrote to ./data/3.dat.
+===================================
+Ring Dimension: 32768
+Plaintext Modulus: 65537
+First Mod Size: 60
+Security Level: HEStd_192_classic
+===================================
+Ring Dimension: 32768
+Scaling Mod Size: 59
+Security Level: HEStd_192_classic
+Batch Size: 0
+===================================
+-----------------------------------
+Key Aggregation
+-----------------------------------
+
+Time:  2.78s
+-----------------------------------
+DelegateStart
+-----------------------------------
+# Empty slots = 63043252
+2 iters for 3026076096 bytes
+0 2147483647
+1 878592449
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+
+Time: 773.21s
+-----------------------------------
+MPSIU-Sum: Party 1
+-----------------------------------
+# Empty slots = 63042801
+2 iters for 3026054448 bytes
+0 2147483647
+1 878570801
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 243.17s
+-----------------------------------
+MPSIU-Sum: Party 2
+-----------------------------------
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Time: 308.48s
+-----------------------------------
+MPSIU-Sum: Party 3
+-----------------------------------
+# Plaintexts = 49165
+# Hashes / Plaintext = 1365
+Computing R => R + (M - Enc(hm))
+
+Randomization: 547.32s
+
+Time: 805.55s
+-----------------------------------
+DelegateFinish
+-----------------------------------
+Time: 1034.92s
+Computed intersection size: 119158
+-----------------------------------
+Joint Decryption
+-----------------------------------
+
+Time:  0.31s
+Computed intersection sum: 3911148859
+
+________________________________________________________
+Executed in   53.85 mins    fish           external
+   usr time  2153.08 mins    0.00 micros  2153.08 mins
+   sys time  485.53 mins  476.00 micros  485.53 mins

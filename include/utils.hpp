@@ -102,19 +102,34 @@ inline void print_title(string title)
 
 inline void random_bytes(uint8_t *buf, size_t sz)
 {
-  // if (sz > INT32_MAX)
-  // {
-  int64_t remain = sz;
-  while (remain > 0)
+  if (sz <= INT32_MAX)
   {
-    int err = RAND_bytes(buf, (remain > INT32_MAX) ? INT32_MAX : remain);
+    int err = RAND_bytes(buf, sz);
     assert(err == 1);
-    remain -= INT32_MAX;
+    return;
   }
-  return;
+
+  size_t iter = (sz / INT32_MAX) + ((sz % INT32_MAX == 0) ? 0 : 1);
+  cout << iter << " iters for " << sz << " bytes" << endl;
+  for (size_t i = 0; i < iter; i++)
+  {
+    int32_t count = INT32_MAX;
+    if ((i == iter - 1) && (sz % (size_t)INT32_MAX != 0))
+      count = (int32_t)(sz % (size_t)INT32_MAX);
+    cout << i << " " << count << endl;
+    int err = RAND_bytes(buf + (i * INT32_MAX), count);
+    assert(err == 1);
+  }
+  // int64_t idx = 0;
+  // while (idx < sz)
+  // {
+  //   int count = INT32_MAX;
+  //   if sz - idx ==
+
+  //   int err = RAND_bytes(buf, (remain > INT32_MAX) ? INT32_MAX : remain);
+  //   assert(err == 1);
+  //   remain -= INT32_MAX;
   // }
-  // int err = RAND_bytes(buf, sz);
-  // assert(err == 1);
 }
 
 vector<string> random_strings(size_t num)
