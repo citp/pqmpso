@@ -1,6 +1,6 @@
-# Post-Quantum Multiparty Private Set Operations
+## Post-Quantum Multiparty Private Set Operations
 
-## Dependencies
+### Dependencies
 
 For building and running locally
 * [Crypto++](https://cryptopp.com/index.html)
@@ -8,3 +8,10 @@ For building and running locally
 
 For benchmarks using Azure
 * [Terraform](https://www.terraform.io)
+
+### Build
+
+```
+cmake .
+make
+```
