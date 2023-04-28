@@ -17,8 +17,6 @@ struct IC
     KeyPair<DCRTPoly> kp = party.bfv_ctx->KeyGen();
     bfv_sk = kp.secretKey;
     party.pro_parms.pk = kp.publicKey;
-
-    // gen_rot_keys();
   }
 
   /* -------------------------------------- */
@@ -67,7 +65,6 @@ struct IC
     if (party.pro_parms.with_ad)
       party.encrypt_all(party.ckks_ctx, party.pro_parms.apk, ret.e1, V_pt);
 
-    // cout << "Ciphertext size: " << ret.e0[0]->GetMetadataByKey()
     printf("\nTime: %5.2fs\n", sw.elapsed());
     return ret;
   }

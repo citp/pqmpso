@@ -61,30 +61,6 @@ void run_dkg(IC &ic, vector<ServiceProvider> &providers, Oversight &pclob, PK &a
   ic.party.pro_parms.ask = ask;
   pclob.pro_parms.ask = ask;
 
-  // Verify apk
-  // vector<double> a = {1 << 10, 1 << 9, 1 << 8, 1 << 7};
-  // PT pt1 = del.party.ckks_ctx->MakeCKKSPackedPlaintext(a), pt2;
-  // cout << pt1 << endl;
-  // vector<CT> ct = {del.party.ckks_ctx->Encrypt(apk, pt1)};
-  // vector<CT> ct_parts(providers.size() + 1);
-  // ct_parts[0] = del.party.joint_decrypt(ct)[0];
-  // for (size_t i = 1; i <= providers.size(); i++)
-  //   ct_parts[i] = providers[i - 1].joint_decrypt(ct)[0];
-  // del.party.ckks_ctx->MultipartyDecryptFusion(ct_parts, &pt2);
-  // pt2->SetLength(4);
-  // cout << pt2 << endl;
-
-  // Verify ask
-  // del.party.ckks_ctx->InsertEvalSumKey(ask);
-  // CT ct2 = del.party.ckks_ctx->EvalSum(ct[0], 4);
-  // vector<CT> ct_sum = {ct2};
-  // ct_parts[0] = del.party.joint_decrypt(ct_sum)[0];
-  // for (size_t i = 1; i <= providers.size(); i++)
-  //   ct_parts[i] = providers[i - 1].joint_decrypt(ct_sum)[0];
-  // del.party.ckks_ctx->MultipartyDecryptFusion(ct_parts, &pt2);
-  // pt2->SetLength(1);
-  // cout << pt2 << endl;
-
   printf("\nTime: %5.2fs\n", sw.elapsed());
 }
 

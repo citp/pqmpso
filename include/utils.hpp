@@ -137,16 +137,6 @@ inline void random_bytes(uint8_t *buf, size_t sz)
     int err = RAND_bytes(buf + (i * INT32_MAX), count);
     assert(err == 1);
   }
-  // int64_t idx = 0;
-  // while (idx < sz)
-  // {
-  //   int count = INT32_MAX;
-  //   if sz - idx ==
-
-  //   int err = RAND_bytes(buf, (remain > INT32_MAX) ? INT32_MAX : remain);
-  //   assert(err == 1);
-  //   remain -= INT32_MAX;
-  // }
 }
 
 vector<string> random_strings(size_t num)
@@ -173,11 +163,6 @@ int64_t random_int(size_t mod)
   random_bytes((uint8_t *)&r, sizeof(r));
   return r % mod;
 }
-
-// vector<int64_t> random_ints(size_t num)
-// {
-//   vector<int64_t> r;
-// }
 
 /* -------------------------------------- */
 

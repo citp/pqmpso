@@ -46,7 +46,6 @@ inline void add_single_pt_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT *a,
   bfv_ctx->EvalAddInPlace(*a, *b);
 }
 
-// (a, b) \in (M, C)
 inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, const CryptoContext<DCRTPoly> &ckks_ctx, CT *a, CT *b, PT *pt, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
 {
   vector<int64_t> int_vec(ring_dim);
@@ -55,10 +54,7 @@ inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, con
     int_vec[i] = random_int(plain_mod);
 
   *pt = bfv_ctx->MakePackedPlaintext(int_vec);
-  // CT res;
-  // multiply_single(bfv_ctx, a, &pt, &res);
   add_single_pt_inplace(bfv_ctx, a, pt);
-  // *a = res;
 
   if (b != nullptr)
   {
@@ -66,12 +62,6 @@ inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, con
     PT pt = ckks_ctx->MakeCKKSPackedPlaintext(dbl_vec);
     add_single_pt_inplace(ckks_ctx, b, &pt);
   }
-  // else
-  // {
-  //   size_t num_hashes_per_pt = ring_dim / num_cf_per_hash;
-  //   usint mult = 1 + (generator() % (num_hashes_per_pt - 1));
-  //   bfv_ctx->EvalRotate(*a, mult * num_cf_per_hash);
-  // }
 }
 
 inline void decrypt_check_one(const CryptoContext<DCRTPoly> &bfv_ctx, const SK &sk, const CT *ct, size_t nbits, PackingType pack_type, vector<bool> *ret, size_t batch_size)
@@ -169,14 +159,11 @@ struct ServiceProvider
 
   void encrypt_all(const CryptoContext<DCRTPoly> &ctx, PK &pk, vector<CT> &M, vector<PT> &pt)
   {
-    // Stopwatch sw;
-    // sw.start();
     M.resize(pt.size());
     thread_pool pool(pro_parms.num_threads);
     for (size_t i = 0; i < M.size(); i++)
       pool.push_task(encrypt_single, ctx, pk, &pt[i], &M[i]);
     pool.wait_for_tasks();
-    // printf("encrypted %lu plaintexts (took %5.2fs).", pt.size(), sw.elapsed());
   }
 
   void add_all_inplace(vector<CT> &A, const vector<CT> &B)
@@ -281,14 +268,12 @@ struct ServiceProvider
       kp = ckks_ctx->KeyGen();
       ckks_ctx->EvalSumKeyGen(kp.secretKey, kp.publicKey);
       *ask = ckks_ctx->GetEvalSumKeyMap(kp.secretKey->GetKeyTag());
-      // aak = ckks_ctx->KeySwitchGen(kp.secretKey, kp.secretKey);
     }
     else
     {
       kp = ckks_ctx->MultipartyKeyGen(apk);
       shared_ptr<EvalKeys> ask_i = ckks_ctx->MultiEvalSumKeyGen(kp.secretKey, ask, kp.publicKey->GetKeyTag());
       ask = ckks_ctx->MultiAddEvalSumKeys(ask, ask_i, kp.publicKey->GetKeyTag());
-      // aak = ckks_ctx->MultiKeySwitchGen(kp.secretKey, kp.secretKey, aak);
     }
     sk_i = kp.secretKey;
     apk = kp.publicKey;
@@ -308,7 +293,6 @@ struct ServiceProvider
     vector<PT> v_pt;
     hm.insert(X);
     hm.hot_encoding_mask(bfv_ctx, hm_1hot, hm_0hot, pro_parms.batch_size);
-    // hm.hot_encoding_mask(bfv_ctx, hm_0hot, true, pro_parms.batch_size);
     hm.serialize(bfv_ctx, ckks_ctx, hm_pt, v_pt, (pro_parms.party_id == 1), pro_parms.batch_size, pro_parms.num_threads);
 
     // Compute R => R + (M - Enc(hm))
