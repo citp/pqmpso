@@ -5,14 +5,14 @@
 using namespace std;
 using namespace lbcrypto;
 
-struct Delegate
+struct IC
 {
   SK bfv_sk;
-  Party party;
+  ServiceProvider party;
 
-  Delegate(ProtocolParameters &pro_parms, shared_ptr<CCParams<CryptoContextBFVRNS>> &bfv_parms, shared_ptr<CCParams<CryptoContextCKKSRNS>> &ckks_parms)
+  IC(ProtocolParameters &pro_parms, shared_ptr<CCParams<CryptoContextBFVRNS>> &bfv_parms, shared_ptr<CCParams<CryptoContextCKKSRNS>> &ckks_parms)
   {
-    party = Party(pro_parms, bfv_parms, ckks_parms);
+    party = ServiceProvider(pro_parms, bfv_parms, ckks_parms);
 
     KeyPair<DCRTPoly> kp = party.bfv_ctx->KeyGen();
     bfv_sk = kp.secretKey;
@@ -48,10 +48,10 @@ struct Delegate
     return res;
   }
 
-  Tuple<vector<CT>> start(vector<string> &X, vector<int64_t> &ad)
+  Tuple<vector<CT>> round1(vector<string> &X, vector<int64_t> &ad)
   {
     Stopwatch sw;
-    print_title("DelegateStart");
+    print_title("IC: Round 1");
     sw.start();
 
     HashMap hm(party.pro_parms);
@@ -72,10 +72,10 @@ struct Delegate
     return ret;
   }
 
-  size_t finish(const Tuple<vector<CT>> *B, vector<CT> &agg_res)
+  size_t round2(const Tuple<vector<CT>> *B, vector<CT> &agg_res)
   {
     Stopwatch sw;
-    print_title("DelegateFinish");
+    print_title("IC: Round 2");
     sw.start();
 
     if (party.pro_parms.with_ad)
@@ -85,5 +85,15 @@ struct Delegate
     printf("Time: %5.2fs\n", sw.elapsed());
 
     return int_size;
+  }
+
+  void round2_fix(Tuple<vector<CT>> *B, vector<PT> *pt)
+  {
+    Stopwatch sw;
+    print_title("IC: Round 2 (fixed)");
+    sw.start();
+
+    party.decrypt_all(bfv_sk, B, pt);
+    printf("Time: %5.2fs\n", sw.elapsed());
   }
 };

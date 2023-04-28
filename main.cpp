@@ -4,7 +4,8 @@
 #include "utils.hpp"
 #include "hashmap.hpp"
 #include "argparse.hpp"
-#include "delegate.hpp"
+#include "ic.hpp"
+#include "oversight.hpp"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ void print_parameters(bool iu, bool run_sum, int n, int x0, int xi, int int_sz, 
   print_sep();
 }
 
-size_t run_joint_decryption(Delegate &del, vector<Party> &providers, vector<CT> &agg_res)
+size_t run_joint_decryption(IC &del, vector<ServiceProvider> &providers, vector<CT> &agg_res)
 {
   Stopwatch sw;
   print_title("Joint Decryption");
@@ -42,22 +43,23 @@ size_t run_joint_decryption(Delegate &del, vector<Party> &providers, vector<CT> 
   return (size_t)agg_pt->GetCKKSPackedValue()[0].real();
 }
 
-void run_dkg(Delegate &del, vector<Party> &providers, PK &apk, shared_ptr<EvalKeys> &ask)
+void run_dkg(IC &ic, vector<ServiceProvider> &providers, Oversight &pclob, PK &apk, shared_ptr<EvalKeys> &ask)
 {
   Stopwatch sw;
   print_title("Key Aggregation");
   sw.start();
 
   // Compute keys
-  del.party.dkg(apk, ask);
+  ic.party.dkg(apk, ask);
   for (size_t i = 0; i < providers.size(); i++)
     providers[i].dkg(apk, ask);
 
   // Set keys
-  del.party.pro_parms.apk = apk;
+  ic.party.pro_parms.apk = apk;
   for (size_t i = 0; i < providers.size(); i++)
     providers[i].pro_parms.apk = apk;
-  del.party.pro_parms.ask = ask;
+  ic.party.pro_parms.ask = ask;
+  pclob.pro_parms.ask = ask;
 
   // Verify apk
   // vector<double> a = {1 << 10, 1 << 9, 1 << 8, 1 << 7};
@@ -223,42 +225,47 @@ int main(int argc, char *argv[])
   ProtocolParameters pro_parms = {0, (size_t)n, (size_t)map_sz, 48, (size_t)nthreads, n_hashes_in_pt(pack_type, ring_dim, 16, 384), run_sum, pack_type, nullptr, nullptr};
 
   /* Setup */
-  Delegate del(pro_parms, bfv_parms, ckks_parms);
-  vector<Party> providers(n - 1);
-
-  pro_parms.pk = del.party.pro_parms.pk;
-  pro_parms.ek = del.party.pro_parms.ek;
+  IC ic(pro_parms, bfv_parms, ckks_parms);
+  vector<ServiceProvider> providers(n - 1);
+  pro_parms.pk = ic.party.pro_parms.pk;
+  pro_parms.ek = ic.party.pro_parms.ek;
   for (int i = 0; i < n - 1; i++)
   {
     pro_parms.party_id = i + 1;
-    providers[i] = Party(pro_parms, bfv_parms, ckks_parms);
+    providers[i] = ServiceProvider(pro_parms, bfv_parms, ckks_parms);
   }
+  Oversight pclob(pro_parms, bfv_parms, ckks_parms);
 
   /* Key Aggregation */
   PK apk;
   shared_ptr<EvalKeys> ask = make_shared<EvalKeys>();
   EvalKey<DCRTPoly> aak;
   if (run_sum)
-    run_dkg(del, providers, apk, ask);
+    run_dkg(ic, providers, pclob, apk, ask);
 
-  /* Delegate Finish */
-  Tuple<vector<CT>> M = del.start(data[0], ad);
+  /* IC: Round 1 */
+  Tuple<vector<CT>> M = ic.round1(data[0], ad);
 
-  /* Main Protocol */
+  /* Service Providers */
   Tuple<vector<CT>> R;
   R.e0 = vector<CT>(M.e0.size());
   R.e1 = vector<CT>(M.e1.size());
+  vector<PT> Rand;
   for (int i = 0; i < n - 1; i++)
-    providers[i].compute_on_r(&M, &R, data[i + 1], iu, run_sum);
+    providers[i].compute_on_r(&M, &R, &Rand, data[i + 1], iu, run_sum);
+  
+  /* IC: Round 2 */
+  vector<PT> R_pt;
+  ic.round2_fix(&R, &R_pt);
 
   vector<CT> agg_res(1);
-  /* Delegate Finish */
-  size_t int_size = del.finish(&R, agg_res);
+  size_t int_size = pclob.compute_result(&R, R_pt, Rand, agg_res);
+
   cout << "Computed intersection size: " << int_size << endl;
   if (run_sum)
   {
     /* Joint Decryption */
-    size_t int_sum = run_joint_decryption(del, providers, agg_res);
+    size_t int_sum = run_joint_decryption(ic, providers, agg_res);
     cout << "Computed intersection sum: " << setprecision(9) << int_sum << endl;
   }
   return 0;

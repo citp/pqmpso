@@ -17,6 +17,23 @@ using namespace std::chrono;
 
 /* -------------------------------------- */
 
+size_t get_one_hot(vector<vector<bool>> &ret, vector<bool> &one_hot_matches)
+{
+  size_t count = 0;
+  one_hot_matches.resize(ret.size() * ret[0].size());
+  for (size_t i = 0; i < ret.size(); i++)
+  {
+    for (size_t j = 0; j < ret[i].size(); j++)
+    {
+      count += (size_t)ret[i][j];
+      one_hot_matches[(i * ret[i].size()) + j] = ret[i][j];
+      }
+  }
+  return count;
+}
+
+/* -------------------------------------- */
+
 struct Stopwatch
 {
   time_point<high_resolution_clock> t0;

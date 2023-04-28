@@ -21,6 +21,11 @@ inline void encrypt_zero_single(const CryptoContext<DCRTPoly> &bfv_ctx, const PK
   *ct = bfv_ctx->Encrypt(pk, pt);
 }
 
+inline void decrypt_single(const CryptoContext<DCRTPoly> &bfv_ctx, const SK &sk, CT *ct, PT *pt)
+{
+  bfv_ctx->Decrypt(sk, *ct, pt);
+}
+
 inline void subtract_single(const CryptoContext<DCRTPoly> &bfv_ctx, const CT *a, const PT *b, CT *res)
 {
   *res = bfv_ctx->EvalSub(*a, *b);
@@ -42,22 +47,23 @@ inline void add_single_pt_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, CT *a,
 }
 
 // (a, b) \in (M, C)
-inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, const CryptoContext<DCRTPoly> &ckks_ctx, CT *a, CT *b, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
+inline void randomize_single_inplace(const CryptoContext<DCRTPoly> &bfv_ctx, const CryptoContext<DCRTPoly> &ckks_ctx, CT *a, CT *b, PT *pt, size_t plain_mod, size_t ring_dim, size_t num_cf_per_hash)
 {
   vector<int64_t> int_vec(ring_dim);
 
   for (size_t i = 0; i < ring_dim; i++)
     int_vec[i] = random_int(plain_mod);
 
-  PT pt = bfv_ctx->MakePackedPlaintext(int_vec);
-  CT res;
-  multiply_single(bfv_ctx, a, &pt, &res);
-  *a = res;
+  *pt = bfv_ctx->MakePackedPlaintext(int_vec);
+  // CT res;
+  // multiply_single(bfv_ctx, a, &pt, &res);
+  add_single_pt_inplace(bfv_ctx, a, pt);
+  // *a = res;
 
   if (b != nullptr)
   {
     vector<double> dbl_vec = {0.0};
-    pt = ckks_ctx->MakeCKKSPackedPlaintext(dbl_vec);
+    PT pt = ckks_ctx->MakeCKKSPackedPlaintext(dbl_vec);
     add_single_pt_inplace(ckks_ctx, b, &pt);
   }
   // else
@@ -95,7 +101,7 @@ inline void decrypt_check_one(const CryptoContext<DCRTPoly> &bfv_ctx, const SK &
 
 /* -------------------------------------- */
 
-struct Party
+struct ServiceProvider
 {
   shared_ptr<CCParams<CryptoContextBFVRNS>> bfv_parms;
   shared_ptr<CCParams<CryptoContextCKKSRNS>> ckks_parms;
@@ -104,9 +110,9 @@ struct Party
   ProtocolParameters pro_parms;
   SK sk_i;
 
-  Party() {}
+  ServiceProvider() {}
 
-  Party(ProtocolParameters &pp, shared_ptr<CCParams<CryptoContextBFVRNS>> &bfv_p, shared_ptr<CCParams<CryptoContextCKKSRNS>> &ckks_p)
+  ServiceProvider(ProtocolParameters &pp, shared_ptr<CCParams<CryptoContextBFVRNS>> &bfv_p, shared_ptr<CCParams<CryptoContextCKKSRNS>> &ckks_p)
   {
     pro_parms = pp;
     bfv_parms = bfv_p;
@@ -125,19 +131,11 @@ struct Party
     BS::thread_pool pool(pro_parms.num_threads);
     vector<vector<bool>> ret(B->e0.size());
     size_t nbits = pro_parms.hash_sz * 8;
-    size_t count = 0;
     for (size_t i = 0; i < B->e0.size(); i++)
       pool.push_task(decrypt_check_one, bfv_ctx, bfv_sk, &(B->e0[i]), nbits, pro_parms.pack_type, &ret[i], pro_parms.batch_size);
     pool.wait_for_tasks();
-    vector<bool> one_hot_matches(ret.size() * ret[0].size());
-    for (size_t i = 0; i < ret.size(); i++)
-    {
-      for (size_t j = 0; j < ret[i].size(); j++)
-      {
-        count += (size_t)ret[i][j];
-        one_hot_matches[(i * ret[i].size()) + j] = ret[i][j];
-      }
-    }
+    vector<bool> one_hot_matches;
+    size_t count = get_one_hot(ret, one_hot_matches);
     if (pro_parms.with_ad)
     {
       one_hot_matches.resize(pro_parms.batch_size * B->e1.size());
@@ -158,6 +156,15 @@ struct Party
       result = ckks_ctx->EvalSum(result, pro_parms.batch_size);
     }
     return count;
+  }
+
+  void decrypt_all(SK &sk, Tuple<vector<CT>> *B, vector<PT> *pt)
+  {
+    pt->resize(B->e0.size());
+    thread_pool pool(pro_parms.num_threads);
+    for (size_t i = 0; i < pt->size(); i++)
+      pool.push_task(decrypt_single, bfv_ctx, sk, &(B->e0[i]), &((*pt)[i]));
+    pool.wait_for_tasks();
   }
 
   void encrypt_all(const CryptoContext<DCRTPoly> &ctx, PK &pk, vector<CT> &M, vector<PT> &pt)
@@ -199,7 +206,7 @@ struct Party
     pool.wait_for_tasks();
   }
 
-  void randomize_all_inplace(Tuple<vector<CT>> *B)
+  void randomize_all_inplace(Tuple<vector<CT>> *B, vector<PT> *Rand)
   {
     Stopwatch sw;
     sw.start();
@@ -209,16 +216,17 @@ struct Party
     size_t ring_dim = bfv_ctx->GetRingDimension();
     size_t num_cf_per_hash = ring_dim / pro_parms.batch_size;
     size_t b_size = B->e0.size();
+    Rand->resize(b_size);
 
     if (pro_parms.with_ad)
     {
       for (size_t i = 0; i < b_size; i++)
-        pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), &(B->e1[i]), plain_mod, ring_dim, num_cf_per_hash);
+        pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), &(B->e1[i]), &(*Rand)[i], plain_mod, ring_dim, num_cf_per_hash);
     }
     else
     {
       for (size_t i = 0; i < b_size; i++)
-        pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), nullptr, plain_mod, ring_dim, num_cf_per_hash);
+        pool.push_task(randomize_single_inplace, bfv_ctx, ckks_ctx, &(B->e0[i]), nullptr, &((*Rand)[i]), plain_mod, ring_dim, num_cf_per_hash);
     }
 
     vector<size_t> idx_vec(b_size);
@@ -235,12 +243,16 @@ struct Party
       {
         swap(B->e0[i], B->e0[idx_vec[i]]);
         swap(B->e1[i], B->e1[idx_vec[i]]);
+        swap((*Rand)[i], (*Rand)[idx_vec[i]]);
       }
     }
     else
     {
       for (size_t i = 0; i < b_size; i++)
+      {
         swap(B->e0[i], B->e0[idx_vec[i]]);
+        swap((*Rand)[i], (*Rand)[idx_vec[i]]);
+      }
     }
 
     pool.wait_for_tasks();
@@ -282,11 +294,11 @@ struct Party
     apk = kp.publicKey;
   }
 
-  void compute_on_r(const Tuple<vector<CT>> *M, Tuple<vector<CT>> *R, const vector<string> &X, bool iu, bool run_sum)
+  void compute_on_r(const Tuple<vector<CT>> *M, Tuple<vector<CT>> *R, vector<PT> *Rand, const vector<string> &X, bool iu, bool run_sum)
   {
     Stopwatch sw;
     string protocol = string(iu ? "MPSIU" : "MPSI") + string(run_sum ? "-Sum" : "");
-    print_title(protocol + ": Party " + to_string(pro_parms.party_id));
+    print_title(protocol + ": Service Provider " + to_string(pro_parms.party_id));
     sw.start();
 
     HashMap hm(pro_parms);
@@ -326,7 +338,7 @@ struct Party
 
     // The last party randomizes the ciphertexts
     if (pro_parms.party_id == pro_parms.num_parties - 1)
-      randomize_all_inplace(R);
+      randomize_all_inplace(R, Rand);
 
     printf("\nTime: %5.2fs\n", sw.elapsed());
   }
